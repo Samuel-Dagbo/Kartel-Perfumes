@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import {
   Package, ShoppingCart, DollarSign, TrendingUp, Sparkles,
-  ArrowRight, ShoppingBag, BarChart3,
+  ArrowRight, ShoppingBag, BarChart3, Clock,
 } from "lucide-react";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { formatPrice } from "@/lib/utils";
@@ -23,6 +23,8 @@ export default function Dashboard() {
     todayRevenue: 0,
     lowStockCount: 0,
   });
+  const [recentSales, setRecentSales] = useState<Array<{ _id: string; saleNumber: string; total: number; createdAt: string; customerName?: string; paymentMethod: string }>>([]);
+  const [recentOrders, setRecentOrders] = useState<Array<{ _id: string; orderNumber: string; total: number; createdAt: string; customer: { name: string }; status: string }>>([]);
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
   const [loading, setLoading] = useState(true);
@@ -35,19 +37,20 @@ export default function Dashboard() {
         fetch("/api/sales"),
       ]);
       const products = await prodRes.json();
-      const orders = await orderRes.json();
-      const sales = await salesRes.json();
+      const ordersJson = await orderRes.json();
+      const salesJson = await salesRes.json();
 
-      const productCount = (products.products ?? products ?? []).length;
-      const orderCount = (orders.orders ?? orders ?? []).length;
-      const saleList = sales.sales ?? sales ?? [];
+      const productList = products.products ?? products ?? [];
+      const orderList = ordersJson.orders ?? ordersJson ?? [];
+      const saleList = salesJson.sales ?? salesJson ?? [];
+      const productCount = productList.length;
+      const orderCount = orderList.length;
       const revenue = saleList.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todaySales = saleList.filter((s: { createdAt: string | Date }) => new Date(s.createdAt) >= today);
-      const todayRevenue = todaySales.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
-      const productList = products.products ?? products ?? [];
+      const todaySalesList = saleList.filter((s: { createdAt: string | Date }) => new Date(s.createdAt) >= today);
+      const todayRevenue = todaySalesList.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
       const lowStockCount = productList.filter((p: { stock: number }) => p.stock > 0 && p.stock <= 5).length;
 
       setStats({
@@ -55,10 +58,13 @@ export default function Dashboard() {
         totalOrders: orderCount,
         totalSales: saleList.length,
         revenue,
-        todaySales: todaySales.length,
+        todaySales: todaySalesList.length,
         todayRevenue,
         lowStockCount,
       });
+
+      setRecentSales(saleList.slice(0, 5));
+      setRecentOrders(orderList.slice(0, 5));
       setLoading(false);
     } catch {
       setLoading(false);
@@ -71,7 +77,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Premium Header */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-charcoal via-charcoal-light to-ebony p-8 md:p-10">
         <div className="absolute top-0 right-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-gold/[0.03] rounded-full blur-3xl" />
@@ -97,7 +102,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {[1, 2, 3, 4].map((i) => (
@@ -137,7 +141,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Today's Summary */}
       {!loading && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -182,7 +185,6 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* Quick Actions & Recent Activity */}
       <div className="grid md:grid-cols-2 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -201,6 +203,7 @@ export default function Dashboard() {
                   { href: "/dashboard/inventory", icon: Package, label: "Manage Inventory", desc: "Products & stock" },
                   { href: "/dashboard/orders", icon: ShoppingBag, label: "View Orders", desc: "Order management" },
                   { href: "/dashboard/pos", icon: BarChart3, label: "POS Terminal", desc: "Point of sale" },
+                  { href: "/dashboard/analytics", icon: TrendingUp, label: "Analytics", desc: "Business insights" },
                 ].map((item) => (
                   <Link
                     key={item.label}
@@ -233,44 +236,57 @@ export default function Dashboard() {
                 <div className="w-1 h-6 bg-gradient-to-b from-gold to-gold/30 rounded-full" />
                 <h2 className="text-lg font-serif text-charcoal">Recent Activity</h2>
               </div>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-mist/30">
-                  <span className="text-sm text-charcoal/50">Total transactions</span>
-                  <span className="text-3xl font-serif text-charcoal">{stats.totalOrders + stats.totalSales}</span>
+
+              {recentSales.length === 0 && recentOrders.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 bg-mist/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <ShoppingBag className="w-6 h-6 text-charcoal/20" />
+                  </div>
+                  <p className="text-sm text-charcoal/50">No activity yet. Create a sale to get started.</p>
+                  <Link href="/dashboard/pos" className="inline-block mt-3 text-xs text-gold hover:underline">
+                    Open POS Terminal
+                  </Link>
                 </div>
-                {stats.totalOrders > 0 || stats.totalSales > 0 ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-mist/30 to-mist/10 rounded-xl p-5 text-center border border-mist/20">
-                      <ShoppingCart className="w-5 h-5 text-gold-dark/50 mx-auto mb-2" />
-                      <p className="text-xs text-charcoal/40 mb-1">Orders</p>
-                      <p className="text-2xl font-serif text-charcoal">{stats.totalOrders}</p>
+              ) : (
+                <div className="space-y-3">
+                  {[...recentSales.slice(0, 3), ...recentOrders.slice(0, 2)].sort(() => -1).slice(0, 5).map((item: any, i) => (
+                    <div key={item._id || i} className="flex items-center justify-between py-2.5 border-b border-mist/20 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.saleNumber ? "bg-gold/10" : "bg-sage/10"}`}>
+                          {item.saleNumber ? (
+                            <ShoppingBag className="w-3.5 h-3.5 text-gold-dark/60" />
+                          ) : (
+                            <ShoppingCart className="w-3.5 h-3.5 text-sage/60" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-charcoal/80">
+                            {item.saleNumber || item.orderNumber}
+                          </p>
+                          <p className="text-[10px] text-charcoal/40">
+                            {item.customerName || item.customer?.name || "Walk-in"}
+                            <span className="mx-1">·</span>
+                            {new Date(item.createdAt).toLocaleDateString("en", { month: "short", day: "numeric" })}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium">{formatPrice(item.total)}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-mist/30 to-mist/10 rounded-xl p-5 text-center border border-mist/20">
-                      <TrendingUp className="w-5 h-5 text-gold-dark/50 mx-auto mb-2" />
-                      <p className="text-xs text-charcoal/40 mb-1">Sales</p>
-                      <p className="text-2xl font-serif text-charcoal">{stats.totalSales}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-14 h-14 bg-mist/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <ShoppingBag className="w-6 h-6 text-charcoal/20" />
-                    </div>
-                    <p className="text-sm text-charcoal/50">No activity yet. Create a sale to get started.</p>
-                  </div>
-                )}
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-charcoal/40">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sage/40 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-sage" />
-                    </span>
-                    System operational
-                  </div>
-                  <span className="text-charcoal/30">
-                    {stats.totalProducts} products · {stats.totalOrders} orders · {stats.totalSales} sales
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between text-xs pt-4 mt-4 border-t border-mist/20">
+                <div className="flex items-center gap-2 text-charcoal/40">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sage/40 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-sage" />
                   </span>
+                  System operational
                 </div>
+                <span className="text-charcoal/30">
+                  {stats.totalProducts} products · {stats.totalOrders} orders · {stats.totalSales} sales
+                </span>
               </div>
             </div>
           </div>

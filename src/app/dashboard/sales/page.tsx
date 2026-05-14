@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ShoppingBag, DollarSign } from "lucide-react";
+import { ShoppingBag, DollarSign, CreditCard, Banknote, TrendingUp } from "lucide-react";
 import SalesTable from "@/components/dashboard/SalesTable";
 import { formatPrice } from "@/lib/utils";
 
 export default function SalesPage() {
-  const [sales, setSales] = useState([]);
+  const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSales = useCallback(async () => {
@@ -28,10 +28,24 @@ export default function SalesPage() {
   }, [fetchSales]);
 
   const totalRevenue = sales.reduce((sum: number, s: { total: number }) => sum + s.total, 0);
+  const cashSales = sales.filter((s) => s.paymentMethod === "cash").length;
+  const cardSales = sales.filter((s) => s.paymentMethod === "card").length;
+  const transferSales = sales.filter((s) => s.paymentMethod === "transfer").length;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todaySales = sales.filter((s: { createdAt: string | Date }) => new Date(s.createdAt) >= today);
+  const todayRevenue = todaySales.reduce((sum: number, s: { total: number }) => sum + s.total, 0);
+
+  const statCards = [
+    { label: "Total Sales", value: sales.length, icon: ShoppingBag, color: "text-gold-dark", bg: "bg-gold/10" },
+    { label: "Total Revenue", value: formatPrice(totalRevenue), icon: DollarSign, color: "text-sage", bg: "bg-sage/10" },
+    { label: "Today", value: `${todaySales.length} sales`, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Today Revenue", value: formatPrice(todayRevenue), icon: TrendingUp, color: "text-gold-dark", bg: "bg-gold/10" },
+  ];
 
   return (
     <div className="space-y-8">
-      {/* Premium Header */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-charcoal via-charcoal-light to-ebony p-8 md:p-10">
         <div className="absolute top-0 right-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-gold/[0.03] rounded-full blur-3xl" />
@@ -57,7 +71,26 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* Loading State */}
+      {!loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        >
+          {statCards.map((card, i) => (
+            <div key={card.label} className="bg-white rounded-2xl border border-mist/40 p-5 card-shadow hover:border-gold/20 transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <div className={`p-2.5 ${card.bg} rounded-xl`}>
+                  <card.icon className={`w-4 h-4 ${card.color}`} />
+                </div>
+              </div>
+              <p className="text-2xl font-serif text-charcoal">{card.value}</p>
+              <p className="text-[10px] text-charcoal/40 tracking-wider uppercase font-medium mt-1">{card.label}</p>
+            </div>
+          ))}
+        </motion.div>
+      )}
+
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
