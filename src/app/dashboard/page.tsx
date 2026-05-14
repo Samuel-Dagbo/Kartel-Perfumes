@@ -5,13 +5,12 @@ import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import {
   Package, ShoppingCart, DollarSign, TrendingUp, Sparkles,
-  RefreshCw, ArrowRight, ShoppingBag, BarChart3,
+  ArrowRight, ShoppingBag, BarChart3,
 } from "lucide-react";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
-import { seedDatabase } from "@/lib/seed";
 import { StatsCardSkeleton } from "@/components/ui/Skeleton";
 
 export default function Dashboard() {
@@ -70,16 +69,6 @@ export default function Dashboard() {
     fetchStats();
   }, []);
 
-  const handleSeed = async () => {
-    try {
-      const res = await seedDatabase();
-      alert(res.message);
-      fetchStats();
-    } catch (e) {
-      alert("Seed failed: " + (e as Error).message);
-    }
-  };
-
   return (
     <div className="space-y-8">
       {/* Premium Header */}
@@ -99,17 +88,6 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-3">
-            {isAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSeed}
-                icon={<RefreshCw className="w-4 h-4" />}
-                className="text-white/50 hover:text-white hover:bg-white/5 border border-white/10"
-              >
-                Seed Database
-              </Button>
-            )}
             <Link href="/dashboard/pos">
               <Button variant="gold" size="sm" icon={<TrendingUp className="w-4 h-4" />}>
                 POS Terminal
@@ -223,37 +201,20 @@ export default function Dashboard() {
                   { href: "/dashboard/inventory", icon: Package, label: "Manage Inventory", desc: "Products & stock" },
                   { href: "/dashboard/orders", icon: ShoppingBag, label: "View Orders", desc: "Order management" },
                   { href: "/dashboard/pos", icon: BarChart3, label: "POS Terminal", desc: "Point of sale" },
-                  ...(isAdmin ? [{ href: null as string | null, icon: RefreshCw, label: "Seed Data", desc: "Populate database", action: handleSeed }] : []),
                 ].map((item) => (
-                  <div key={item.label}>
-                    {item.href ? (
-                      <Link
-                        href={item.href}
-                        className="block p-5 bg-mist/20 rounded-xl hover:bg-gold/5 hover:border-gold/20 border border-transparent transition-all duration-300 group/card"
-                      >
-                        <div className="w-10 h-10 bg-gradient-to-br from-gold/10 to-gold/5 rounded-xl flex items-center justify-center mb-3 group-hover/card:scale-110 transition-transform">
-                          <item.icon className="w-5 h-5 text-gold-dark" />
-                        </div>
-                        <p className="text-sm font-medium text-charcoal/80 group-hover/card:text-charcoal transition-colors">
-                          {item.label}
-                        </p>
-                        <p className="text-xs text-charcoal/40 mt-0.5">{item.desc}</p>
-                      </Link>
-                    ) : (
-                      <button
-                        onClick={item.action}
-                        className="w-full text-left p-5 bg-gold/[0.03] rounded-xl hover:bg-gold/10 hover:border-gold/20 border border-transparent transition-all duration-300 group/card"
-                      >
-                        <div className="w-10 h-10 bg-gradient-to-br from-gold/10 to-gold/5 rounded-xl flex items-center justify-center mb-3 group-hover/card:scale-110 transition-transform">
-                          <item.icon className="w-5 h-5 text-gold-dark" />
-                        </div>
-                        <p className="text-sm font-medium text-charcoal/80 group-hover/card:text-charcoal transition-colors">
-                          {item.label}
-                        </p>
-                        <p className="text-xs text-charcoal/40 mt-0.5">{item.desc}</p>
-                      </button>
-                    )}
-                  </div>
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="block p-5 bg-mist/20 rounded-xl hover:bg-gold/5 hover:border-gold/20 border border-transparent transition-all duration-300 group/card"
+                  >
+                    <div className="w-10 h-10 bg-gradient-to-br from-gold/10 to-gold/5 rounded-xl flex items-center justify-center mb-3 group-hover/card:scale-110 transition-transform">
+                      <item.icon className="w-5 h-5 text-gold-dark" />
+                    </div>
+                    <p className="text-sm font-medium text-charcoal/80 group-hover/card:text-charcoal transition-colors">
+                      {item.label}
+                    </p>
+                    <p className="text-xs text-charcoal/40 mt-0.5">{item.desc}</p>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -293,9 +254,9 @@ export default function Dashboard() {
                 ) : (
                   <div className="text-center py-8">
                     <div className="w-14 h-14 bg-mist/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <RefreshCw className="w-6 h-6 text-charcoal/20" />
+                      <ShoppingBag className="w-6 h-6 text-charcoal/20" />
                     </div>
-                    <p className="text-sm text-charcoal/50">No activity yet. Seed the database or make a sale to get started.</p>
+                    <p className="text-sm text-charcoal/50">No activity yet. Create a sale to get started.</p>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-xs">

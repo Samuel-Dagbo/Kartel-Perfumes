@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit2, Trash2, Search, Package, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, Search, Package, AlertTriangle, Upload, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -33,6 +33,14 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [editUploading, setEditUploading] = useState(false);
+  const addFileRef = useRef<HTMLInputElement>(null);
+  const editFileRef = useRef<HTMLInputElement>(null);
+  const [addImagePreview, setAddImagePreview] = useState<string | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [addImageUrl, setAddImageUrl] = useState<string>("");
+  const [editImageUrl, setEditImageUrl] = useState<string>("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -62,21 +70,68 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
     }
   };
 
+  const uploadImage = async (file: File): Promise<string> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data.url;
+  };
+
+  const handleAddFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAddImagePreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setAddImageUrl(url);
+      toast.success("Image uploaded");
+    } catch {
+      toast.error("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEditFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditImagePreview(URL.createObjectURL(file));
+    setEditUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setEditImageUrl(url);
+      toast.success("Image uploaded");
+    } catch {
+      toast.error("Failed to upload image");
+    } finally {
+      setEditUploading(false);
+    }
+  };
+
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
     try {
+      const body: Record<string, unknown> = {
+        stock: parseInt(editingProduct.stock.toString()),
+        price: parseFloat(editingProduct.price.toString()),
+      };
+      if (editImageUrl) {
+        body.images = [editImageUrl];
+      }
       const res = await fetch(`/api/products/${editingProduct._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stock: parseInt(editingProduct.stock.toString()),
-          price: parseFloat(editingProduct.price.toString()),
-        }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         toast.success("Product updated");
         setEditingProduct(null);
+        setEditImageUrl("");
+        setEditImagePreview(null);
         onRefresh();
       } else {
         toast.error("Failed to update product");
@@ -88,6 +143,10 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!addImageUrl) {
+      toast.error("Please upload a product image");
+      return;
+    }
     try {
       const res = await fetch("/api/products", {
         method: "POST",
@@ -97,7 +156,7 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock),
           volume: parseInt(formData.volume),
-          images: ["/placeholder.jpg"],
+          images: [addImageUrl],
           scentNotes: { top: [], heart: [], base: [] },
           brand: "Kartel",
           category: formData.concentration,
@@ -106,6 +165,8 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
       if (res.ok) {
         toast.success("Product added");
         setShowAddModal(false);
+        setAddImageUrl("");
+        setAddImagePreview(null);
         setFormData({ name: "", description: "", price: "", stock: "", concentration: "", volume: "", gender: "unisex" });
         onRefresh();
       } else {
@@ -164,10 +225,7 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-mist shrink-0 border border-mist/30 shadow-sm">
                           {product.images?.[0] ? (
-                            <div
-                              className="w-full h-full bg-cover bg-center"
-                              style={{ backgroundImage: `url(${product.images[0]})` }}
-                            />
+                            <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${product.images[0]})` }} />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-gold/10 to-gold/5 flex items-center justify-center">
                               <Package className="w-4 h-4 text-gold-dark/40" />
@@ -187,20 +245,14 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
                     <td className="py-4 px-5">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 max-w-[60px] h-1.5 bg-mist/60 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${product.stock <= 5 ? "bg-rosegold" : product.stock <= 15 ? "bg-gold/50" : "bg-sage/50"}`}
-                            style={{ width: `${Math.min((product.stock / 50) * 100, 100)}%` }}
-                          />
+                          <div className={`h-full rounded-full ${product.stock <= 5 ? "bg-rosegold" : product.stock <= 15 ? "bg-gold/50" : "bg-sage/50"}`}
+                            style={{ width: `${Math.min((product.stock / 50) * 100, 100)}%` }} />
                         </div>
                         <span className={`text-xs font-medium ${product.stock <= 5 ? "text-rosegold" : "text-charcoal/60"}`}>
                           {product.stock}
                         </span>
-                        {product.stock <= 5 && product.stock > 0 && (
-                          <AlertTriangle className="w-3 h-3 text-rosegold/60 shrink-0" />
-                        )}
-                        {product.stock === 0 && (
-                          <span className="text-[9px] text-rosegold/70 bg-rosegold/10 px-1.5 py-0.5 rounded font-medium">OUT</span>
-                        )}
+                        {product.stock <= 5 && product.stock > 0 && <AlertTriangle className="w-3 h-3 text-rosegold/60 shrink-0" />}
+                        {product.stock === 0 && <span className="text-[9px] text-rosegold/70 bg-rosegold/10 px-1.5 py-0.5 rounded font-medium">OUT</span>}
                       </div>
                     </td>
                     <td className="py-4 px-5 hidden sm:table-cell">
@@ -210,18 +262,12 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
                     </td>
                     <td className="py-4 px-5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setEditingProduct(product)}
-                          className="p-2 hover:bg-mist/50 rounded-xl transition-colors duration-200"
-                          aria-label="Edit product"
-                        >
+                        <button onClick={() => { setEditingProduct(product); setEditImageUrl(""); setEditImagePreview(null); }}
+                          className="p-2 hover:bg-mist/50 rounded-xl transition-colors duration-200" aria-label="Edit product">
                           <Edit2 className="w-4 h-4 text-charcoal/40 hover:text-gold-dark transition-colors" />
                         </button>
-                        <button
-                          onClick={() => setDeleteConfirm(product._id)}
-                          className="p-2 hover:bg-rosegold/10 rounded-xl transition-colors duration-200"
-                          aria-label="Delete product"
-                        >
+                        <button onClick={() => setDeleteConfirm(product._id)}
+                          className="p-2 hover:bg-rosegold/10 rounded-xl transition-colors duration-200" aria-label="Delete product">
                           <Trash2 className="w-4 h-4 text-rosegold/60 hover:text-rosegold transition-colors" />
                         </button>
                       </div>
@@ -238,9 +284,7 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
               <Package className="w-7 h-7 text-charcoal/20" />
             </div>
             <p className="text-charcoal/40 text-sm">No products found</p>
-            {search && (
-              <p className="text-xs text-charcoal/30 mt-1">Try a different search term</p>
-            )}
+            {search && <p className="text-xs text-charcoal/30 mt-1">Try a different search term</p>}
           </div>
         )}
       </div>
@@ -256,12 +300,8 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
             <p className="text-xs text-charcoal/40 mt-1">This action cannot be undone.</p>
           </div>
           <div className="flex gap-3 justify-center">
-            <Button variant="danger" size="sm" onClick={() => handleDelete(deleteConfirm!)}>
-              Delete
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(null)}>
-              Cancel
-            </Button>
+            <Button variant="danger" size="sm" onClick={() => handleDelete(deleteConfirm!)}>Delete</Button>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
           </div>
         </div>
       </Modal>
@@ -270,12 +310,35 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
       <Modal isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} title="Edit Product">
         <form onSubmit={handleEdit} className="space-y-5">
           <Input label="Product Name" value={editingProduct?.name || ""} disabled />
+
+          {/* Image upload */}
+          <div>
+            <label className="block text-xs font-medium tracking-[0.15em] uppercase text-charcoal/60 mb-2">Product Image</label>
+            <input type="file" ref={editFileRef} accept="image/*" onChange={handleEditFileChange} className="hidden" />
+            {(editImagePreview || editingProduct?.images?.[0]) && (
+              <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-mist/30 mb-3">
+                <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${editImagePreview || editingProduct?.images?.[0]})` }} />
+                {editImagePreview && (
+                  <button type="button" onClick={() => { setEditImagePreview(null); setEditImageUrl(""); }}
+                    className="absolute top-1 right-1 p-1 bg-white/80 rounded-full">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+            <button type="button" onClick={() => editFileRef.current?.click()} disabled={editUploading}
+              className="flex items-center gap-2 px-4 py-2.5 border border-mist/50 rounded-xl text-xs text-charcoal/60 hover:border-gold/30 hover:text-gold-dark transition-all">
+              <Upload className="w-4 h-4" />
+              {editUploading ? "Uploading..." : editImageUrl ? "Change Image" : "Upload Image"}
+            </button>
+          </div>
+
           <Input label="Price" type="number" step="0.01" value={editingProduct?.price || ""}
             onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, price: parseFloat(e.target.value) } : null)} />
           <Input label="Stock" type="number" value={editingProduct?.stock || ""}
             onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, stock: parseInt(e.target.value) } : null)} />
           <div className="flex gap-3 pt-2">
-            <Button type="submit" variant="primary" size="sm">Save Changes</Button>
+            <Button type="submit" variant="primary" size="sm" loading={editUploading}>Save Changes</Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setEditingProduct(null)}>Cancel</Button>
           </div>
         </form>
@@ -286,6 +349,26 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
         <form onSubmit={handleAdd} className="space-y-5">
           <Input label="Product Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
           <Input label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+
+          {/* Image upload */}
+          <div>
+            <label className="block text-xs font-medium tracking-[0.15em] uppercase text-charcoal/60 mb-2">Product Image *</label>
+            <input type="file" ref={addFileRef} accept="image/*" onChange={handleAddFileChange} className="hidden" />
+            {addImagePreview && (
+              <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-mist/30 mb-3">
+                <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${addImagePreview})` }} />
+                {addImageUrl && (
+                  <div className="absolute bottom-1 left-1 bg-sage/90 text-white text-[8px] px-2 py-0.5 rounded">Uploaded</div>
+                )}
+              </div>
+            )}
+            <button type="button" onClick={() => addFileRef.current?.click()} disabled={uploading}
+              className="flex items-center gap-2 px-4 py-2.5 border border-mist/50 rounded-xl text-xs text-charcoal/60 hover:border-gold/30 hover:text-gold-dark transition-all">
+              <Upload className="w-4 h-4" />
+              {uploading ? "Uploading..." : addImageUrl ? "Change Image" : "Upload Image"}
+            </button>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Input label="Price" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required />
             <Input label="Stock" type="number" value={formData.stock} onChange={(e) => setFormData({ ...formData, stock: e.target.value })} required />
@@ -304,7 +387,7 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
             </select>
           </div>
           <div className="flex gap-3 pt-2">
-            <Button type="submit" variant="primary" size="sm">Add Product</Button>
+            <Button type="submit" variant="primary" size="sm" loading={uploading} disabled={!addImageUrl}>Add Product</Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddModal(false)}>Cancel</Button>
           </div>
         </form>
