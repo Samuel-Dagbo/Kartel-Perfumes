@@ -77,7 +77,7 @@ export default function SignUpPage() {
       >
         <div className="text-center mb-10">
           <Link href="/" className="inline-block group">
-            <h1 className="text-3xl font-serif text-charcoal mb-3 tracking-tight group-hover:text-gold transition-colors duration-300">Kartel</h1>
+            <h1 className="text-3xl font-serif mb-3 tracking-[0.15em] text-gradient-gold">KARTEL</h1>
           </Link>
           <div className="flex items-center justify-center gap-2">
             <div className="w-4 h-px bg-gold/30" />

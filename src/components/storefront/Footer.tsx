@@ -36,8 +36,8 @@ export default function Footer() {
         <div className="py-20 md:py-28">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-16">
             <div className="col-span-2 md:col-span-1">
-              <h3 className="text-white font-serif text-xl tracking-wide mb-6">
-Kartel
+<h3 className="text-white font-serif text-xl tracking-[0.15em] mb-6">
+KARTEL
               </h3>
               <p className="text-xs leading-relaxed text-white/30 max-w-xs font-light">
                 Artisan perfumery dedicated to the craft of exceptional fragrance.
