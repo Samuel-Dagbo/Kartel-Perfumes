@@ -65,13 +65,7 @@ function SignInForm() {
         Don&apos;t have an account?{" "}
         <Link href="/sign-up" className="text-gold hover:underline font-medium">Sign up</Link>
       </p>
-      <div className="pt-6 border-t border-mist/50">
-        <p className="text-[10px] text-charcoal/30 text-center leading-relaxed">
-          Test credentials (click Seed Database on Dashboard first):
-          <br />
-          <span className="font-mono text-charcoal/40">admin@kartel.com / TestAdmin123!</span>
-        </p>
-      </div>
+
     </form>
   );
 }

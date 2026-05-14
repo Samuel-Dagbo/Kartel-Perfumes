@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 import {
   Package, ShoppingCart, DollarSign, TrendingUp, Sparkles,
   RefreshCw, ArrowRight, ShoppingBag, BarChart3,
@@ -23,7 +24,8 @@ export default function Dashboard() {
     todayRevenue: 0,
     lowStockCount: 0,
   });
-  const [todayLabel, setTodayLabel] = useState("");
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
@@ -97,15 +99,17 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSeed}
-              icon={<RefreshCw className="w-4 h-4" />}
-              className="text-white/50 hover:text-white hover:bg-white/5 border border-white/10"
-            >
-              Seed Database
-            </Button>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSeed}
+                icon={<RefreshCw className="w-4 h-4" />}
+                className="text-white/50 hover:text-white hover:bg-white/5 border border-white/10"
+              >
+                Seed Database
+              </Button>
+            )}
             <Link href="/dashboard/pos">
               <Button variant="gold" size="sm" icon={<TrendingUp className="w-4 h-4" />}>
                 POS Terminal
@@ -219,7 +223,7 @@ export default function Dashboard() {
                   { href: "/dashboard/inventory", icon: Package, label: "Manage Inventory", desc: "Products & stock" },
                   { href: "/dashboard/orders", icon: ShoppingBag, label: "View Orders", desc: "Order management" },
                   { href: "/dashboard/pos", icon: BarChart3, label: "POS Terminal", desc: "Point of sale" },
-                  { href: null, icon: RefreshCw, label: "Seed Data", desc: "Populate database", action: handleSeed },
+                  ...(isAdmin ? [{ href: null as string | null, icon: RefreshCw, label: "Seed Data", desc: "Populate database", action: handleSeed }] : []),
                 ].map((item) => (
                   <div key={item.label}>
                     {item.href ? (

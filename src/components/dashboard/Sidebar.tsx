@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Package,
@@ -21,13 +22,20 @@ import {
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  adminOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3, adminOnly: true },
   { href: "/dashboard/inventory", label: "Inventory", icon: Package },
   { href: "/dashboard/sales", label: "Sales", icon: Receipt },
   { href: "/dashboard/orders", label: "Orders", icon: ShoppingCart },
-  { href: "/dashboard/users", label: "Users", icon: Users },
+  { href: "/dashboard/users", label: "Users", icon: Users, adminOnly: true },
   { href: "/dashboard/pos", label: "POS Terminal", icon: Store },
 ];
 
@@ -35,6 +43,10 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+
+  const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <>
@@ -74,7 +86,9 @@ export default function Sidebar() {
               </div>
               <div>
                 <span className="text-base font-serif tracking-[0.15em] block leading-tight">KARTEL</span>
-                <span className="text-[9px] text-white/30 tracking-[0.2em] uppercase">Administration</span>
+                <span className="text-[9px] text-white/30 tracking-[0.2em] uppercase">
+                  {isAdmin ? "Administration" : "Staff"}
+                </span>
               </div>
             </Link>
           )}
@@ -104,7 +118,8 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
+          {visibleItems.map((item) => {
+            const Icon = item.icon;
             const isActive = pathname === item.href;
             return (
               <Link
@@ -124,7 +139,7 @@ export default function Sidebar() {
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-gold rounded-r-full"
                   />
                 )}
-                <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", isActive && "text-gold")} />
+                <Icon className={cn("w-5 h-5 shrink-0 transition-colors", isActive && "text-gold")} />
                 {!collapsed && (
                   <span className="tracking-wide">{item.label}</span>
                 )}
@@ -147,7 +162,6 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Spacer - only visible on lg+ when sidebar is fixed */}
       <div className={cn("hidden lg:block shrink-0 transition-all duration-400", collapsed ? "w-20" : "w-64")} />
     </>
   );
