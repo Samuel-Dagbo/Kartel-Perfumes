@@ -37,8 +37,7 @@ function SignInForm() {
       }
 
       toast.success("Signed in successfully");
-      router.push(callbackUrl);
-      router.refresh();
+      window.location.href = callbackUrl;
     } catch {
       toast.error("Something went wrong");
     } finally {
