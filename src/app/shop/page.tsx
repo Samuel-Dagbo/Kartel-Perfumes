@@ -5,7 +5,7 @@ import CartDrawer from "@/components/storefront/CartDrawer";
 import Footer from "@/components/storefront/Footer";
 
 export const metadata: Metadata = {
-  title: "Shop | Maison Noire",
+  title: "Shop | Kartel",
   description: "Browse our complete collection of luxury artisan fragrances.",
 };
 

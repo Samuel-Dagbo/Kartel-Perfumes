@@ -17,7 +17,7 @@ const testimonials = [
     title: "Loyal Customer",
   },
   {
-    text: "Maison Noire has redefined what perfume means to me. The craftsmanship is evident in every note.",
+    text: "Kartel has redefined what perfume means to me. The craftsmanship is evident in every note.",
     author: "Marcus T.",
     title: "Fragrance Collector",
   },
@@ -79,7 +79,7 @@ export default function AboutSection() {
             <div className="w-12 h-px bg-gold/30 mb-8" />
             <div className="space-y-5 text-charcoal/50 text-sm md:text-base leading-relaxed">
               <p>
-                At Maison Noire, we believe fragrance is the most intimate form of
+                At Kartel, we believe fragrance is the most intimate form of
                 expression. Each perfume in our collection is a collaboration with
                 master perfumers who share our obsession with quality and
                 authenticity.

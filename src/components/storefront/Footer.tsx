@@ -37,7 +37,7 @@ export default function Footer() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-16">
             <div className="col-span-2 md:col-span-1">
               <h3 className="text-white font-serif text-xl tracking-wide mb-6">
-                Maison Noire
+Kartel
               </h3>
               <p className="text-xs leading-relaxed text-white/30 max-w-xs font-light">
                 Artisan perfumery dedicated to the craft of exceptional fragrance.
@@ -84,7 +84,18 @@ export default function Footer() {
 
         <div className="py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-white/20">
-            &copy; {new Date().getFullYear()} Maison Noire. All rights reserved.
+            &copy; {new Date().getFullYear()} Kartel. All rights reserved.
+          </p>
+          <p className="text-xs text-white/15">
+            Built by{" "}
+            <a
+              href="https://samtechlabs.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/30 hover:text-gold transition-colors duration-200"
+            >
+              Samtech Labs
+            </a>
           </p>
           <div className="flex items-center gap-6">
             <span className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer">Instagram</span>

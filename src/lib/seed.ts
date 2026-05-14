@@ -62,7 +62,7 @@ export async function seedDatabase() {
           tax: Math.round((allProducts[0].price * 2 + allProducts[3].price) * 0.08 * 100) / 100,
           shipping: 0, total: 0,
           status: "delivered", paymentStatus: "paid", paymentMethod: "card",
-          customer: { name: "Isabelle Moreau", email: "customer@maisonnoire.com" },
+          customer: { name: "Isabelle Moreau", email: "customer@kartel.com" },
           shippingAddress: { line1: "42 Rue de la Paix", city: "New York", state: "NY", zip: "10012", country: "US" },
           createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         },

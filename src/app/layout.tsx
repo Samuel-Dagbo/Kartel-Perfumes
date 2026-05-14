@@ -19,7 +19,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Maison Noire | Artisan Fragrances",
+  title: "Kartel | Artisan Fragrances",
   description:
     "Discover our curated collection of exceptional fragrances, crafted in limited batches for the discerning few.",
 };

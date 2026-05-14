@@ -70,7 +70,7 @@ function SignInForm() {
         <p className="text-[10px] text-charcoal/30 text-center leading-relaxed">
           Test credentials (click Seed Database on Dashboard first):
           <br />
-          <span className="font-mono text-charcoal/40">admin@maisonnoire.com / TestAdmin123!</span>
+          <span className="font-mono text-charcoal/40">admin@kartel.com / TestAdmin123!</span>
         </p>
       </div>
     </form>
@@ -96,7 +96,7 @@ export default function SignInPage() {
       >
         <div className="text-center mb-10">
           <Link href="/" className="inline-block group">
-            <h1 className="text-3xl font-serif text-charcoal mb-3 tracking-tight group-hover:text-gold transition-colors duration-300">Maison Noire</h1>
+            <h1 className="text-3xl font-serif text-charcoal mb-3 tracking-tight group-hover:text-gold transition-colors duration-300">Kartel</h1>
           </Link>
           <div className="flex items-center justify-center gap-2">
             <div className="w-4 h-px bg-gold/30" />

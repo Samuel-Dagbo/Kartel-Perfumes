@@ -99,7 +99,7 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
           volume: parseInt(formData.volume),
           images: ["/placeholder.jpg"],
           scentNotes: { top: [], heart: [], base: [] },
-          brand: "Maison Noire",
+          brand: "Kartel",
           category: formData.concentration,
         }),
       });

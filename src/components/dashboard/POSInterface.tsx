@@ -252,7 +252,7 @@ export default function POSInterface() {
       </head>
       <body>
         <div class="header">
-          <h1>MAISON NOIRE</h1>
+          <h1>KARTEL</h1>
           <p>Artisan Fragrances</p>
           <p style="font-size:9px;margin-top:8px">${new Date(lastSale.createdAt).toLocaleDateString("en", {
             year: "numeric", month: "long", day: "numeric",
@@ -283,7 +283,7 @@ export default function POSInterface() {
         <div class="gold-line"></div>
         <div class="footer">
           <p>Thank you for your patronage</p>
-          <p style="margin-top:4px">maisonnoire.com</p>
+          <p style="margin-top:4px">kartel.com</p>
         </div>
         <script>window.print();window.close();</script>
       </body>
@@ -553,7 +553,7 @@ export default function POSInterface() {
             {/* On-screen receipt preview */}
             <div className="max-w-sm mx-auto bg-white border-2 border-dashed border-mist/60 rounded-2xl p-6 mb-6">
               <div className="text-center mb-6">
-                <h3 className="font-serif text-xl text-charcoal tracking-wider">MAISON NOIRE</h3>
+                <h3 className="font-serif text-xl text-charcoal tracking-wider">KARTEL</h3>
                 <p className="text-[10px] text-charcoal/40 tracking-[0.2em] uppercase mt-1">Artisan Fragrances</p>
                 <div className="w-12 h-px bg-gold/40 mx-auto mt-4" />
               </div>
@@ -621,7 +621,7 @@ export default function POSInterface() {
 
               <div className="text-center mt-6 text-[10px] text-charcoal/30">
                 <p>Thank you for your patronage</p>
-                <p className="mt-0.5">maisonnoire.com</p>
+                <p className="mt-0.5">kartel.com</p>
               </div>
             </div>
 

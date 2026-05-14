@@ -158,7 +158,7 @@ async function seed() {
         orderNumber: genId("ORD"), status: "delivered", paymentStatus: "paid", paymentMethod: "card",
         items: [{ product: allProducts[0]._id, name: allProducts[0].name, price: allProducts[0].price, quantity: 2, image: allProducts[0].images[0] }],
         subtotal: allProducts[0].price * 2, tax: Math.round(allProducts[0].price * 2 * 0.08 * 100) / 100, shipping: 0, total: 0,
-        customer: { name: "Isabelle Moreau", email: "customer@maisonnoire.com" },
+        customer: { name: "Isabelle Moreau", email: "customer@kartel.com" },
         shippingAddress: { line1: "42 Rue de la Paix", city: "New York", state: "NY", zip: "10012", country: "US" },
         createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       },
@@ -213,9 +213,9 @@ async function seed() {
   await mongoose.disconnect();
   console.log("\n  Database seeded successfully!");
   console.log("──────────────────────────────────────");
-  console.log("  admin@maisonnoire.com / TestAdmin123!");
-  console.log("  staff@maisonnoire.com / TestStaff123!");
-  console.log("  customer@maisonnoire.com / TestCustomer123!");
+  console.log("  admin@kartel.com / TestAdmin123!");
+  console.log("  staff@kartel.com / TestStaff123!");
+  console.log("  customer@kartel.com / TestCustomer123!");
   console.log("──────────────────────────────────────");
 }
 

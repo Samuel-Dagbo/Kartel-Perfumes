@@ -49,7 +49,7 @@ export default function Navbar() {
 
             <Link href="/" className="flex items-center gap-2.5 group">
               <span className={`text-xl md:text-2xl font-serif tracking-[0.08em] transition-colors duration-500 ${scrolled ? "text-charcoal" : "text-white"}`}>
-                Maison Noire
+                Kartel
               </span>
             </Link>
 

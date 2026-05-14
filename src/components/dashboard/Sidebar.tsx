@@ -73,7 +73,7 @@ export default function Sidebar() {
                 <Sparkles className="w-5 h-5 text-gold" />
               </div>
               <div>
-                <span className="text-base font-serif tracking-wider block leading-tight">Maison Noire</span>
+                <span className="text-base font-serif tracking-wider block leading-tight">Kartel</span>
                 <span className="text-[9px] text-white/30 tracking-[0.2em] uppercase">Administration</span>
               </div>
             </Link>
