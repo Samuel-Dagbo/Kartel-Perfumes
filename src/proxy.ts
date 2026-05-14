@@ -1,36 +1,37 @@
-import { getToken } from "next-auth/jwt";
-import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
-export default async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+export default withAuth(
+  function proxy(req) {
+    const token = req.nextauth.token;
+    const path = req.nextUrl.pathname;
 
-  const isDashboard = pathname.startsWith("/dashboard");
-  const isAuthPage = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
+    const isAuthPage = path.startsWith("/sign-in") || path.startsWith("/sign-up");
 
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+    if (isAuthPage && token) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
 
-  if (isAuthPage && token) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    if (path.startsWith("/dashboard")) {
+      if (token?.role === "customer") {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
+
+      const adminOnlyPaths = ["/dashboard/analytics", "/dashboard/users"];
+      if (adminOnlyPaths.some((p) => path.startsWith(p)) && token?.role !== "admin") {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
+    }
+
+    return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token,
+    },
   }
-
-  if (isDashboard && !token) {
-    const signInUrl = new URL("/sign-in", req.url);
-    signInUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(signInUrl);
-  }
-
-  if (isDashboard && token && token.role === "customer") {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  return NextResponse.next();
-}
+);
 
 export const config = {
-  matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-  ],
+  matcher: ["/dashboard/:path*", "/sign-in", "/sign-up"],
 };
