@@ -13,6 +13,12 @@ export default withAuth(
     }
 
     if (path.startsWith("/dashboard")) {
+      if (!token) {
+        const signInUrl = new URL("/sign-in", req.url);
+        signInUrl.searchParams.set("callbackUrl", path);
+        return NextResponse.redirect(signInUrl);
+      }
+
       if (token?.role === "customer") {
         return NextResponse.redirect(new URL("/", req.url));
       }

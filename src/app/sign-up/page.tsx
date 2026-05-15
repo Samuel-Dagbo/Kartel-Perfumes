@@ -50,7 +50,7 @@ export default function SignUpPage() {
         return;
       }
 
-      window.location.href = "/";
+      router.push("/");
     } catch {
       toast.error("Something went wrong");
     } finally {

@@ -33,14 +33,22 @@ function SignInForm() {
 
       if (result?.error) {
         toast.error("Invalid email or password");
+        setLoading(false);
         return;
       }
 
       toast.success("Signed in successfully");
-      window.location.href = callbackUrl;
+      
+      const sessionRes = await fetch("/api/auth/session");
+      const session = await sessionRes.json();
+      
+      if (session?.user?.role === "admin" || session?.user?.role === "staff") {
+        window.location.href = "/dashboard";
+      } else {
+        window.location.href = "/";
+      }
     } catch {
       toast.error("Something went wrong");
-    } finally {
       setLoading(false);
     }
   };

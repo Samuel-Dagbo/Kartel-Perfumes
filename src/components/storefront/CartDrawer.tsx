@@ -31,7 +31,13 @@ export default function CartDrawer() {
       });
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
-      toast.success("Order placed successfully!");
+      toast.success("Order placed successfully!", { duration: 6000 });
+      if (data.emailSent) {
+        toast(
+          "📬 Check your spam folder if you don't see the confirmation in your inbox.",
+          { duration: 8000, icon: "📬" }
+        );
+      }
       useCartStore.getState().clearCart();
       closeCart();
     } catch {

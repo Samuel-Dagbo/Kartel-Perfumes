@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Product } from "@/lib/models/Product";
 import { slugify } from "@/lib/utils";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    const { searchParams } = new URL(req.url);
+    const includeAll = searchParams.get("all") === "true";
+    
     await connectToDatabase();
-    const products = await Product.find({ isActive: true })
-      .sort({ createdAt: -1 })
-      .lean();
+    
+    let products;
+    if (session && (session.user.role === "admin" || session.user.role === "staff") && includeAll) {
+      products = await Product.find().sort({ createdAt: -1 }).lean();
+    } else {
+      products = await Product.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+    }
+    
     return NextResponse.json({ products });
   } catch (error) {
     console.error("GET /api/products error:", error);
@@ -18,6 +29,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.user.role !== "admin" && session.user.role !== "staff") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const body = await req.json();
     const slug = slugify(body.name);

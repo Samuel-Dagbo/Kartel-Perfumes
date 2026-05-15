@@ -3,6 +3,8 @@ import { connectToDatabase } from "@/lib/mongoose";
 import { Order } from "@/lib/models/Order";
 import { Product } from "@/lib/models/Product";
 import { generateOrderNumber } from "@/lib/utils";
+import { sendEmail } from "@/lib/email";
+import { orderConfirmationTemplate } from "@/lib/email-templates";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,7 +41,13 @@ export async function POST(req: NextRequest) {
     const shipping = subtotal > 200 ? 0 : 15;
     const total = subtotal + tax + shipping;
 
-    const orderItems = items.map(
+    const orderItems: {
+      product: string;
+      name: string;
+      price: number;
+      quantity: number;
+      image: string;
+    }[] = items.map(
       (item: { productId: string; name: string; price: number; quantity: number; image: string }) => ({
         product: item.productId,
         name: item.name,
@@ -78,7 +86,25 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ order }, { status: 201 });
+    const email = customer?.email || "guest@example.com";
+    const name = customer?.name || "Valued Customer";
+
+    sendEmail({
+      to: { email, name },
+      subject: `Order Confirmation — ${order.orderNumber}`,
+      html: orderConfirmationTemplate({
+        customerName: name,
+        orderNumber: order.orderNumber,
+        items: orderItems.map((i: { name: string; quantity: number; price: number }) => ({
+          name: i.name,
+          quantity: i.quantity,
+          price: i.price,
+        })),
+        total,
+      }),
+    }).catch((err) => console.error("Order email failed:", err));
+
+    return NextResponse.json({ order, emailSent: true }, { status: 201 });
   } catch (error) {
     console.error("POST /api/checkout error:", error);
     return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
