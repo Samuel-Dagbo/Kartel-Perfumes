@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Menu, X, ShoppingBag, User, LogIn, ChevronsRight, Search, Sparkles,
+  Menu, X, ShoppingBag, User, LogIn, ChevronsRight, Search, Sparkles, Loader2,
 } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { useSession, signOut } from "next-auth/react";
@@ -13,15 +13,30 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { openCart, itemCount } = useCartStore();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     if (searchOpen && searchRef.current) {
       searchRef.current.focus();
     }
   }, [searchOpen]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const isAuth = status === "authenticated";
+  const isLoading = status === "loading";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-40">
@@ -58,7 +73,7 @@ export default function Navbar() {
                   <span className="absolute -bottom-1 left-0 w-0 h-px bg-gold transition-all duration-300 ease-out group-hover:w-full" />
                 </Link>
               ))}
-              {session && (
+              {isAuth && (
                 <Link
                   href="/dashboard"
                   className="text-xs tracking-[0.2em] uppercase text-white/70 hover:text-white transition-colors duration-300"
@@ -78,34 +93,50 @@ export default function Navbar() {
                 <Search className="w-4 h-4 text-white/70" />
               </button>
 
-              {session ? (
-                <div className="relative group">
+              {isLoading ? (
+                <div className="p-2.5">
+                  <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
+                </div>
+              ) : isAuth ? (
+                <div className="relative" ref={userMenuRef}>
                   <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="p-2.5 rounded-xl transition-all duration-300 hover:bg-white/10"
                     aria-label="Account"
                   >
                     <User className="w-4 h-4 text-white/70" />
                   </button>
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-mist/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 py-3 overflow-hidden origin-top-right">
-                    <div className="px-5 py-3 border-b border-mist/50 mb-2">
-                      <p className="text-sm font-medium text-charcoal truncate">{session.user?.name}</p>
-                      <p className="text-xs text-charcoal/40 truncate mt-1">{session.user?.email}</p>
-                    </div>
-                    <Link
-                      href="/dashboard"
-                      className="flex items-center gap-3 px-5 py-3 text-sm text-charcoal/60 hover:text-charcoal hover:bg-mist/40 transition-all duration-200"
-                    >
-                      <ChevronsRight className="w-4 h-4" />
-                      Dashboard
-                    </Link>
-                    <button
-                      onClick={() => signOut({ callbackUrl: "/" })}
-                      className="flex items-center gap-3 w-full text-left px-5 py-3 text-sm text-rosegold/70 hover:text-rosegold hover:bg-rosegold/5 transition-all duration-200"
-                    >
-                      <LogIn className="w-4 h-4" />
-                      Sign Out
-                    </button>
-                  </div>
+                  <AnimatePresence>
+                    {userMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        className="absolute right-0 top-full mt-2 w-56 bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-mist/50 py-3 overflow-hidden origin-top-right"
+                      >
+                        <div className="px-5 py-3 border-b border-mist/50 mb-2">
+                          <p className="text-sm font-medium text-charcoal truncate">{session?.user?.name}</p>
+                          <p className="text-xs text-charcoal/40 truncate mt-1">{session?.user?.email}</p>
+                        </div>
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-5 py-3 text-sm text-charcoal/60 hover:text-charcoal hover:bg-mist/40 transition-all duration-200"
+                        >
+                          <ChevronsRight className="w-4 h-4" />
+                          Dashboard
+                        </Link>
+                        <button
+                          onClick={() => signOut({ callbackUrl: "/" })}
+                          className="flex items-center gap-3 w-full text-left px-5 py-3 text-sm text-rosegold/70 hover:text-rosegold hover:bg-rosegold/5 transition-all duration-200"
+                        >
+                          <LogIn className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ) : (
                 <Link
@@ -194,7 +225,7 @@ export default function Navbar() {
               <Link href="/#about" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 py-3.5 text-sm tracking-[0.2em] uppercase text-white/60 hover:text-white border-b border-white/10 hover:pl-2 transition-all duration-200">
                 <User className="w-4 h-4 text-white/30" /> About
               </Link>
-              {session ? (
+              {isAuth ? (
                 <>
                   <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 py-3.5 text-sm tracking-[0.2em] uppercase text-white/60 hover:text-white border-b border-white/10 hover:pl-2 transition-all duration-200">
                     <ChevronsRight className="w-4 h-4 text-gold/40" /> Dashboard

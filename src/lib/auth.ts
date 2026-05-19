@@ -5,10 +5,6 @@ import bcrypt from "bcryptjs";
 import { connectToDatabase } from "./mongoose";
 import { User } from "./models/User";
 
-async function connectOnce() {
-  await connectToDatabase();
-}
-
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
@@ -33,6 +29,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
+        if (!user.isActive) {
+          throw new Error("Account has been deactivated");
+        }
+
         const isValid = await bcrypt.compare(
           credentials.password,
           user.passwordHash
@@ -54,7 +54,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ account, profile }) {
       if (account?.provider === "google") {
-        await connectOnce();
+        await connectToDatabase();
         const existingUser = await User.findOne({ email: profile?.email });
         if (!existingUser && profile?.email) {
           await User.create({
@@ -63,7 +63,11 @@ export const authOptions: NextAuthOptions = {
             passwordHash: "",
             role: "customer",
             avatar: profile.image || "",
+            isActive: true,
           });
+        }
+        if (existingUser && !existingUser.isActive) {
+          return false;
         }
       }
       return true;
@@ -74,7 +78,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
       }
       if (account?.provider === "google") {
-        await connectOnce();
+        await connectToDatabase();
         const dbUser = await User.findOne({ email: token.email });
         if (dbUser) {
           token.role = dbUser.role;

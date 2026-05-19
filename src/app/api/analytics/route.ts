@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Sale } from "@/lib/models/Sale";
 import { Order } from "@/lib/models/Order";
@@ -7,6 +9,14 @@ import { User } from "@/lib/models/User";
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.user.role !== "admin" && session.user.role !== "staff") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
 
     const now = new Date();

@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,20 +32,21 @@ function SignInForm() {
       });
 
       if (result?.error) {
-        toast.error("Invalid email or password");
+        toast.error(result.error === "CredentialsSignin" ? "Invalid email or password" : result.error);
         setLoading(false);
         return;
       }
 
       toast.success("Signed in successfully");
-      
+
       const sessionRes = await fetch("/api/auth/session");
       const session = await sessionRes.json();
-      
-      if (session?.user?.role === "admin" || session?.user?.role === "staff") {
-        window.location.href = "/dashboard";
+
+      const role = session?.user?.role;
+      if (role === "admin" || role === "staff") {
+        router.push(callbackUrl.startsWith("/sign") ? "/dashboard" : callbackUrl);
       } else {
-        window.location.href = "/";
+        router.push(callbackUrl.startsWith("/sign") || callbackUrl.startsWith("/dashboard") ? "/" : callbackUrl);
       }
     } catch {
       toast.error("Something went wrong");

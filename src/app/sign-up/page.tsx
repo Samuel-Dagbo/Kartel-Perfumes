@@ -109,8 +109,8 @@ export default function SignUpPage() {
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
-            minLength={6}
+            placeholder="Min 8 chars, 1 uppercase, 1 number"
+            minLength={8}
             required
             rightIcon={showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             onRightIconClick={() => setShowPassword(!showPassword)}
