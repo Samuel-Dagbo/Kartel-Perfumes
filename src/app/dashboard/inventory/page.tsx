@@ -1,31 +1,56 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Package, AlertTriangle, CheckCircle, Archive } from "lucide-react";
 import InventoryTable from "@/components/dashboard/InventoryTable";
 import { DashboardTableSkeleton } from "@/components/ui/Skeleton";
 
+interface Product {
+  _id: string;
+  name: string;
+  slug: string;
+  price: number;
+  stock: number;
+  concentration: string;
+  volume: number;
+  gender: string;
+  isActive: boolean;
+  images?: string[];
+}
+
 export default function InventoryPage() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/products?all=true");
-      const data = await res.json();
-      setProducts(data.products ?? data ?? []);
-    } catch {
-      console.error("Failed to fetch products");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchProducts = () => {
+    fetch("/api/products?all=true")
+      .then((res) => res.json())
+      .then((data) => {
+        setProducts(data.products ?? data ?? []);
+      })
+      .catch(() => {
+        console.error("Failed to fetch products");
+      });
+  };
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    let mounted = true;
+    fetch("/api/products?all=true")
+      .then((res) => res.json())
+      .then((data) => {
+        if (mounted) {
+          setProducts(data.products ?? data ?? []);
+        }
+      })
+      .catch(() => {
+        console.error("Failed to fetch products");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   const totalProducts = products.length;
   const activeProducts = products.filter((p) => p.isActive).length;

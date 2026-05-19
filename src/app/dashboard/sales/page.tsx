@@ -1,36 +1,68 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ShoppingBag, DollarSign, CreditCard, Banknote, TrendingUp } from "lucide-react";
+import { ShoppingBag, DollarSign, TrendingUp } from "lucide-react";
 import SalesTable from "@/components/dashboard/SalesTable";
 import { formatPrice } from "@/lib/utils";
 
+interface SaleItem {
+  product: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string | null;
+}
+
+interface Sale {
+  _id: string;
+  saleNumber: string;
+  items: SaleItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  customerName?: string;
+  customerEmail?: string;
+  salesPerson: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export default function SalesPage() {
-  const [sales, setSales] = useState<any[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchSales = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/sales");
-      const data = await res.json();
-      setSales(data.sales ?? []);
-    } catch {
-      console.error("Failed to fetch sales");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchSales = () => {
+    fetch("/api/sales")
+      .then((res) => res.json())
+      .then((data) => {
+        setSales(data.sales ?? []);
+      })
+      .catch(() => {
+        console.error("Failed to fetch sales");
+      });
+  };
 
   useEffect(() => {
-    fetchSales();
-  }, [fetchSales]);
+    let mounted = true;
+    fetch("/api/sales")
+      .then((res) => res.json())
+      .then((data) => {
+        if (mounted) {
+          setSales(data.sales ?? []);
+        }
+      })
+      .catch(() => {
+        console.error("Failed to fetch sales");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   const totalRevenue = sales.reduce((sum: number, s: { total: number }) => sum + s.total, 0);
-  const cashSales = sales.filter((s) => s.paymentMethod === "cash").length;
-  const cardSales = sales.filter((s) => s.paymentMethod === "card").length;
-  const transferSales = sales.filter((s) => s.paymentMethod === "transfer").length;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

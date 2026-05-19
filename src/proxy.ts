@@ -9,7 +9,11 @@ export default withAuth(
     const isAuthPage = path.startsWith("/sign-in") || path.startsWith("/sign-up");
 
     if (isAuthPage && token) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      const role = token.role as string;
+      if (role === "admin" || role === "staff") {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
+      return NextResponse.redirect(new URL("/", req.url));
     }
 
     if (path.startsWith("/dashboard")) {

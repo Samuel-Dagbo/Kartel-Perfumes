@@ -1,35 +1,56 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Shield, UserCog, User as UserIcon, CheckCircle, XCircle } from "lucide-react";
+import { Users, Shield, UserCog, CheckCircle } from "lucide-react";
 import UsersTable from "@/components/dashboard/UsersTable";
 import { DashboardTableSkeleton } from "@/components/ui/Skeleton";
 
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: "admin" | "customer" | "staff";
+  phone?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/users");
-      const data = await res.json();
-      setUsers(data.users ?? []);
-    } catch {
-      console.error("Failed to fetch users");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchUsers = () => {
+    fetch("/api/users")
+      .then((res) => res.json())
+      .then((data) => {
+        setUsers(data.users ?? []);
+      })
+      .catch(() => {
+        console.error("Failed to fetch users");
+      });
+  };
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    let mounted = true;
+    fetch("/api/users")
+      .then((res) => res.json())
+      .then((data) => {
+        if (mounted) {
+          setUsers(data.users ?? []);
+        }
+      })
+      .catch(() => {
+        console.error("Failed to fetch users");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   const admins = users.filter((u) => u.role === "admin").length;
   const staff = users.filter((u) => u.role === "staff").length;
-  const customers = users.filter((u) => u.role === "customer").length;
   const active = users.filter((u) => u.isActive).length;
 
   const statCards = [

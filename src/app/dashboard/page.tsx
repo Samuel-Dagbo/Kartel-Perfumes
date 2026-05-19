@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useSession } from "next-auth/react";
 import {
   Package, ShoppingCart, DollarSign, TrendingUp, Sparkles,
-  ArrowRight, ShoppingBag, BarChart3, Clock,
+  ArrowRight, ShoppingBag, BarChart3,
 } from "lucide-react";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { formatPrice } from "@/lib/utils";
@@ -25,54 +24,50 @@ export default function Dashboard() {
   });
   const [recentSales, setRecentSales] = useState<Array<{ _id: string; saleNumber: string; total: number; createdAt: string; customerName?: string; paymentMethod: string }>>([]);
   const [recentOrders, setRecentOrders] = useState<Array<{ _id: string; orderNumber: string; total: number; createdAt: string; customer: { name: string }; status: string }>>([]);
-  const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "admin";
   const [loading, setLoading] = useState(true);
 
-  const fetchStats = async () => {
-    try {
-      const [prodRes, orderRes, salesRes] = await Promise.all([
-        fetch("/api/products"),
-        fetch("/api/orders"),
-        fetch("/api/sales"),
-      ]);
-      const products = await prodRes.json();
-      const ordersJson = await orderRes.json();
-      const salesJson = await salesRes.json();
-
-      const productList = products.products ?? products ?? [];
-      const orderList = ordersJson.orders ?? ordersJson ?? [];
-      const saleList = salesJson.sales ?? salesJson ?? [];
-      const productCount = productList.length;
-      const orderCount = orderList.length;
-      const revenue = saleList.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todaySalesList = saleList.filter((s: { createdAt: string | Date }) => new Date(s.createdAt) >= today);
-      const todayRevenue = todaySalesList.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
-      const lowStockCount = productList.filter((p: { stock: number }) => p.stock > 0 && p.stock <= 5).length;
-
-      setStats({
-        totalProducts: productCount,
-        totalOrders: orderCount,
-        totalSales: saleList.length,
-        revenue,
-        todaySales: todaySalesList.length,
-        todayRevenue,
-        lowStockCount,
-      });
-
-      setRecentSales(saleList.slice(0, 5));
-      setRecentOrders(orderList.slice(0, 5));
-      setLoading(false);
-    } catch {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchStats();
+    let mounted = true;
+    Promise.all([
+      fetch("/api/products"),
+      fetch("/api/orders"),
+      fetch("/api/sales"),
+    ])
+      .then(([prodRes, orderRes, salesRes]) => Promise.all([prodRes.json(), orderRes.json(), salesRes.json()]))
+      .then(([products, ordersJson, salesJson]) => {
+        if (!mounted) return;
+        
+        const productList = products.products ?? products ?? [];
+        const orderList = ordersJson.orders ?? ordersJson ?? [];
+        const saleList = salesJson.sales ?? salesJson ?? [];
+        const productCount = productList.length;
+        const orderCount = orderList.length;
+        const revenue = saleList.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todaySalesList = saleList.filter((s: { createdAt: string | Date }) => new Date(s.createdAt) >= today);
+        const todayRevenue = todaySalesList.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
+        const lowStockCount = productList.filter((p: { stock: number }) => p.stock > 0 && p.stock <= 5).length;
+
+        setStats({
+          totalProducts: productCount,
+          totalOrders: orderCount,
+          totalSales: saleList.length,
+          revenue,
+          todaySales: todaySalesList.length,
+          todayRevenue,
+          lowStockCount,
+        });
+
+        setRecentSales(saleList.slice(0, 5));
+        setRecentOrders(orderList.slice(0, 5));
+        setLoading(false);
+      })
+      .catch(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
   }, []);
 
   return (
@@ -249,7 +244,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {[...recentSales.slice(0, 3), ...recentOrders.slice(0, 2)].sort(() => -1).slice(0, 5).map((item: any, i) => (
+                  {([...recentSales.slice(0, 3), ...recentOrders.slice(0, 2)] as Array<{ _id?: string; saleNumber?: string; orderNumber?: string; customerName?: string; customer?: { name: string }; createdAt: string; total: number }>).sort(() => -1).slice(0, 5).map((item, i) => (
                     <div key={item._id || i} className="flex items-center justify-between py-2.5 border-b border-mist/20 last:border-0">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.saleNumber ? "bg-gold/10" : "bg-sage/10"}`}>

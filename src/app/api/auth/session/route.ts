@@ -1,22 +1,24 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getToken } from "next-auth/jwt";
+import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const headersList = await headers();
+    const token = await getToken({ req: { headers: headersList } as NextRequest, secret: process.env.NEXTAUTH_SECRET });
     
-    if (!session) {
+    if (!token) {
       return NextResponse.json({ user: null });
     }
 
     return NextResponse.json({
       user: {
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        role: session.user.role,
-        image: session.user.image,
+        id: token.id,
+        name: token.name,
+        email: token.email,
+        role: token.role,
+        image: token.picture,
       },
     });
   } catch (error) {

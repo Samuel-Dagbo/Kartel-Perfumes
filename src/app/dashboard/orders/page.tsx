@@ -1,35 +1,64 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ShoppingCart, Clock, CheckCircle, XCircle, Truck } from "lucide-react";
 import OrderTable from "@/components/dashboard/OrderTable";
 import { DashboardTableSkeleton } from "@/components/ui/Skeleton";
 
+interface Order {
+  _id: string;
+  orderNumber: string;
+  customer: { name: string; email: string };
+  items: Array<{ name: string; quantity: number; price: number }>;
+  total: number;
+  status: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  createdAt: string;
+  shippingAddress: {
+    line1: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+}
+
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/orders");
-      const data = await res.json();
-      setOrders(data.orders ?? data ?? []);
-    } catch {
-      console.error("Failed to fetch orders");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchOrders = () => {
+    fetch("/api/orders")
+      .then((res) => res.json())
+      .then((data) => {
+        setOrders(data.orders ?? data ?? []);
+      })
+      .catch(() => {
+        console.error("Failed to fetch orders");
+      });
+  };
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    let mounted = true;
+    fetch("/api/orders")
+      .then((res) => res.json())
+      .then((data) => {
+        if (mounted) {
+          setOrders(data.orders ?? data ?? []);
+        }
+      })
+      .catch(() => {
+        console.error("Failed to fetch orders");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   const pending = orders.filter((o) => o.status === "pending").length;
   const processing = orders.filter((o) => o.status === "processing" || o.status === "confirmed").length;
-  const shipped = orders.filter((o) => o.status === "shipped").length;
   const delivered = orders.filter((o) => o.status === "delivered").length;
   const cancelled = orders.filter((o) => o.status === "cancelled").length;
 

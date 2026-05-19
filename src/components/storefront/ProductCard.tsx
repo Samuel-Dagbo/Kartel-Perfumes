@@ -60,6 +60,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const g = gradients[index % gradients.length];
   const accent = accentColors[index % accentColors.length];
+  const hasValidImage = product.images && product.images[0] && product.images[0].startsWith("http");
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();

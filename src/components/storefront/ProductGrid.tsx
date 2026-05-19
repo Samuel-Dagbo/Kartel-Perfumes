@@ -81,18 +81,18 @@ export default function ProductGrid({ showHeader = true }: ProductGridProps) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="text-center mb-12 sm:mb-16"
+          className="text-center mb-10 sm:mb-14"
         >
-          <div className="flex items-center justify-center gap-3 mb-4 sm:mb-6">
-            <span className="w-6 sm:w-8 h-px bg-gold/40" />
-            <span className="text-gold tracking-[0.25em] text-[10px] sm:text-xs uppercase font-medium">Curated Selection</span>
-            <span className="w-6 sm:w-8 h-px bg-gold/40" />
+          <div className="flex items-center justify-center gap-4 mb-4 sm:mb-5">
+            <span className="w-8 sm:w-12 h-px bg-gold/30" />
+            <span className="text-gold/60 tracking-[0.3em] text-[9px] sm:text-[10px] uppercase font-medium">Curated Selection</span>
+            <span className="w-8 sm:w-12 h-px bg-gold/30" />
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif text-charcoal mb-4 sm:mb-6 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif text-charcoal mb-3 sm:mb-4 tracking-tight">
             The Collection
           </h2>
-          <div className="w-10 sm:w-12 h-px bg-gold/30 mx-auto mb-6 sm:mb-8" />
-          <p className="text-charcoal/40 text-xs sm:text-sm md:text-base max-w-xl mx-auto font-light leading-relaxed px-4 sm:px-0">
+          <div className="w-8 sm:w-10 h-px bg-gold/20 mx-auto mb-4 sm:mb-6" />
+          <p className="text-charcoal/50 text-xs sm:text-sm max-w-lg mx-auto font-light leading-relaxed px-4 sm:px-0">
             Each fragrance is a masterwork of olfactory artistry, crafted with the
             finest ingredients from around the world.
           </p>
@@ -100,45 +100,45 @@ export default function ProductGrid({ showHeader = true }: ProductGridProps) {
       )}
 
       {/* Toolbar */}
-      <div className="mb-10 sm:mb-14 space-y-5">
+      <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
         {/* Search */}
-        <div className="relative max-w-md mx-auto sm:mx-0">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal/25" />
+        <div className="relative max-w-sm">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal/30" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search fragrances..."
-            className="w-full pl-11 pr-10 py-3 bg-white border border-mist/60 rounded-xl text-sm text-charcoal placeholder:text-charcoal/25 focus:outline-none focus:border-gold/30 focus:ring-1 focus:ring-gold/10 transition-all"
+            className="w-full pl-11 pr-10 py-2.5 sm:py-3 bg-white border border-mist/40 rounded-lg text-sm text-charcoal placeholder:text-charcoal/30 focus:outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/20 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-mist/50 rounded-lg transition-colors"
             >
-              <X className="w-3.5 h-3.5 text-charcoal/25" />
+              <X className="w-3.5 h-3.5 text-charcoal/40" />
             </button>
           )}
         </div>
 
         {/* Category Tabs */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between sm:justify-end gap-4">
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-4 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-xs tracking-[0.2em] uppercase rounded-full border transition-all duration-300 ${
+                className={`px-3 sm:px-5 py-1.5 sm:py-2 text-[10px] sm:text-[11px] tracking-[0.15em] uppercase rounded-full border transition-all duration-300 ${
                   activeCategory === cat.id
                     ? "bg-ebony text-white border-ebony shadow-lg shadow-black/10"
-                    : "bg-transparent text-charcoal/40 border-mist/60 hover:border-charcoal/20 hover:text-charcoal/70"
+                    : "bg-transparent text-charcoal/50 border-mist/50 hover:border-charcoal/20 hover:text-charcoal/70"
                 }`}
               >
                 {cat.label}
               </button>
             ))}
           </div>
-          <span className="text-[11px] sm:text-xs text-charcoal/25 tracking-wide whitespace-nowrap">
+          <span className="text-[11px] sm:text-xs text-charcoal/35 tracking-wide whitespace-nowrap">
             {filtered.length} {filtered.length === 1 ? "fragrance" : "fragrances"}
           </span>
         </div>

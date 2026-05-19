@@ -150,7 +150,7 @@ export default function Sidebar() {
 
         <div className="p-3 border-t border-white/5">
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={async () => { await signOut({ redirect: true, callbackUrl: "/" }); }}
             className={cn(
               "flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all w-full group",
               collapsed && "justify-center"
