@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Product } from "@/lib/models/Product";
+import mongoose from "mongoose";
 
 export async function GET(
   _req: NextRequest,
@@ -12,10 +13,17 @@ export async function GET(
     await connectToDatabase();
     const { id } = await params;
 
-    const product = await Product.findOne({
-      $or: [{ _id: id }, { slug: id }],
-      isActive: true,
-    }).lean();
+    const isObjectId = mongoose.Types.ObjectId.isValid(id);
+    let product;
+
+    if (isObjectId) {
+      product = await Product.findOne({
+        $or: [{ _id: id }, { slug: id }],
+        isActive: true,
+      }).lean();
+    } else {
+      product = await Product.findOne({ slug: id, isActive: true }).lean();
+    }
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
