@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, ShoppingBag, Heart, Shield, Truck, RotateCcw, Check,
-  Star, Maximize2,
+  Maximize2, Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
@@ -24,7 +24,7 @@ interface Product {
   price: number;
   originalPrice?: number;
   images: string[];
-  scentNotes: {
+  scentNotes?: {
     top: string[];
     heart: string[];
     base: string[];
@@ -48,23 +48,38 @@ const noteDots: Record<string, string> = {
   base: "bg-purple-400",
 };
 
+const placeholderGradient = "linear-gradient(145deg, #0f0c29, #302b63, #24243e)";
+
 export default function ProductPage() {
   const params = useParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showZoom, setShowZoom] = useState(false);
   const [stickyBar, setStickyBar] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
+    let mounted = true;
     fetch(`/api/products/${params.id}`)
       .then((res) => res.json())
       .then((data) => {
-        setProduct(data.product);
+        if (!mounted) return;
+        if (data.error) {
+          setError(data.error);
+        } else {
+          setProduct(data.product);
+        }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (mounted) {
+          setError("Failed to load product");
+          setLoading(false);
+        }
+      });
+    return () => { mounted = false; };
   }, [params.id]);
 
   useEffect(() => {
@@ -83,7 +98,7 @@ export default function ProductPage() {
       productId: product._id,
       name: product.name,
       price: product.price,
-      image: product.images[0] || "/placeholder.jpg",
+      image: product.images?.[0] || "",
       volume: product.volume,
     });
     toast.success(`${product.name} added to cart`);
@@ -113,7 +128,7 @@ export default function ProductPage() {
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <>
         <Navbar />
@@ -123,8 +138,9 @@ export default function ProductPage() {
               <ShoppingBag className="w-8 h-8 text-charcoal/20" />
             </div>
             <h1 className="text-2xl font-serif mb-4">Product Not Found</h1>
-            <Link href="/" className="text-gold hover:underline text-sm">
-              Return to Collection
+            <p className="text-charcoal/40 text-sm mb-6">{error || "This product doesn't exist or has been removed."}</p>
+            <Link href="/shop" className="text-gold hover:underline text-sm">
+              Browse the Collection
             </Link>
           </div>
         </main>
@@ -133,13 +149,20 @@ export default function ProductPage() {
     );
   }
 
+  const hasImages = product.images && product.images.length > 0;
+  const hasScentNotes = product.scentNotes && (
+    (product.scentNotes.top && product.scentNotes.top.length > 0) ||
+    (product.scentNotes.heart && product.scentNotes.heart.length > 0) ||
+    (product.scentNotes.base && product.scentNotes.base.length > 0)
+  );
+
   return (
     <>
       <Navbar />
       <main className="pt-20 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
           <Link
-            href="/"
+            href="/shop"
             className="inline-flex items-center gap-2 text-xs tracking-widest uppercase text-charcoal/40 hover:text-charcoal transition-colors duration-200 mb-10 group"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back to Collection
@@ -154,20 +177,26 @@ export default function ProductPage() {
               className="space-y-4"
             >
               <div
-                className="aspect-[3/4] bg-mist rounded-2xl overflow-hidden relative shadow-xl group cursor-crosshair"
+                className="aspect-[3/4] rounded-2xl overflow-hidden relative shadow-xl group cursor-crosshair"
                 onClick={() => setShowZoom(true)}
               >
-                <motion.div
-                  className="w-full h-full bg-cover bg-center transition-all duration-500 group-hover:scale-105"
-                  style={{
-                    backgroundImage: `url(${product.images[selectedImage] || "/placeholder.jpg"})`,
-                  }}
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2 bg-white/80 backdrop-blur rounded-xl shadow-lg">
-                    <Maximize2 className="w-4 h-4 text-charcoal/60" />
+                {hasImages ? (
+                  <>
+                    <motion.div
+                      className="w-full h-full bg-cover bg-center transition-all duration-500 group-hover:scale-105"
+                      style={{ backgroundImage: `url(${product.images[selectedImage]})` }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2 bg-white/80 backdrop-blur rounded-xl shadow-lg">
+                        <Maximize2 className="w-4 h-4 text-charcoal/60" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center" style={{ background: placeholderGradient }}>
+                    <Sparkles className="w-12 h-12 text-white/20" />
                   </div>
-                </div>
+                )}
                 {product.originalPrice && (
                   <span className="absolute top-5 left-5 bg-gradient-to-r from-gold-dark to-gold text-white text-xs font-bold tracking-widest uppercase px-4 py-2 rounded-lg shadow-lg">
                     Sale
@@ -179,13 +208,13 @@ export default function ProductPage() {
                   </div>
                 )}
               </div>
-              {product.images.length > 1 && (
+              {hasImages && product.images.length > 1 && (
                 <div className="flex gap-3">
                   {product.images.map((img, i) => (
                     <button
                       key={i}
                       onClick={() => setSelectedImage(i)}
-                      className={`w-20 h-20 bg-mist rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+                      className={`w-20 h-20 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
                         selectedImage === i ? "border-gold shadow-md shadow-gold/20" : "border-transparent hover:border-mist"
                       }`}
                     >
@@ -207,9 +236,11 @@ export default function ProductPage() {
               className="space-y-8"
             >
               <div>
-                <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3 font-medium">
-                  {product.brand}
-                </p>
+                {product.brand && (
+                  <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3 font-medium">
+                    {product.brand}
+                  </p>
+                )}
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif text-charcoal leading-tight">
                   {product.name}
                 </h1>
@@ -220,23 +251,33 @@ export default function ProductPage() {
                   {formatPrice(product.price)}
                 </span>
                 {product.originalPrice && (
-                  <span className="text-lg text-charcoal/40 line-through">
-                    {formatPrice(product.originalPrice)}
-                  </span>
-                )}
-                {product.originalPrice && (
-                  <span className="text-xs text-rosegold font-medium bg-rosegold/10 px-2.5 py-1 rounded-full">
-                    Save {Math.round((1 - product.price / product.originalPrice) * 100)}%
-                  </span>
+                  <>
+                    <span className="text-lg text-charcoal/40 line-through">
+                      {formatPrice(product.originalPrice)}
+                    </span>
+                    <span className="text-xs text-rosegold font-medium bg-rosegold/10 px-2.5 py-1 rounded-full">
+                      Save {Math.round((1 - product.price / product.originalPrice) * 100)}%
+                    </span>
+                  </>
                 )}
               </div>
 
               <div className="flex items-center gap-3 text-xs text-charcoal/60 tracking-wider uppercase flex-wrap">
-                <span className="bg-mist/60 px-3 py-1.5 rounded-lg">{product.concentration}</span>
-                <span className="text-charcoal/20">|</span>
-                <span className="bg-mist/60 px-3 py-1.5 rounded-lg">{product.volume}ml</span>
-                <span className="text-charcoal/20">|</span>
-                <span className="bg-mist/60 px-3 py-1.5 rounded-lg capitalize">{product.gender}</span>
+                {product.concentration && (
+                  <span className="bg-mist/60 px-3 py-1.5 rounded-lg">{product.concentration}</span>
+                )}
+                {product.volume && (
+                  <>
+                    <span className="text-charcoal/20">|</span>
+                    <span className="bg-mist/60 px-3 py-1.5 rounded-lg">{product.volume}ml</span>
+                  </>
+                )}
+                {product.gender && (
+                  <>
+                    <span className="text-charcoal/20">|</span>
+                    <span className="bg-mist/60 px-3 py-1.5 rounded-lg capitalize">{product.gender}</span>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-2 text-xs">
@@ -255,39 +296,45 @@ export default function ProductPage() {
                 )}
               </div>
 
-              <p className="text-charcoal/60 text-sm leading-relaxed border-l-2 border-gold/20 pl-5">
-                {product.description}
-              </p>
+              {product.description && (
+                <p className="text-charcoal/60 text-sm leading-relaxed border-l-2 border-gold/20 pl-5">
+                  {product.description}
+                </p>
+              )}
 
               {/* Scent Profile */}
-              <div className="space-y-5">
-                <h3 className="text-xs tracking-widest uppercase text-charcoal/70 font-medium">
-                  Scent Profile
-                </h3>
+              {hasScentNotes && (
+                <div className="space-y-5">
+                  <h3 className="text-xs tracking-widest uppercase text-charcoal/70 font-medium">
+                    Scent Profile
+                  </h3>
 
-                {[
-                  { label: "Top Notes", notes: product.scentNotes.top, key: "top" },
-                  { label: "Heart Notes", notes: product.scentNotes.heart, key: "heart" },
-                  { label: "Base Notes", notes: product.scentNotes.base, key: "base" },
-                ].map(({ label, notes, key }) => (
-                  <div key={label} className={`bg-gradient-to-r ${noteGradients[key]} rounded-xl p-4 border border-mist/30`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`w-2 h-2 rounded-full ${noteDots[key]}`} />
-                      <p className="text-xs text-charcoal/50 font-medium">{label}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {notes.map((note) => (
-                        <span
-                          key={note}
-                          className="px-4 py-1.5 bg-white/60 backdrop-blur rounded-full text-xs text-charcoal/60 border border-mist/30 shadow-sm"
-                        >
-                          {note}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  {[
+                    { label: "Top Notes", notes: product.scentNotes?.top || [], key: "top" },
+                    { label: "Heart Notes", notes: product.scentNotes?.heart || [], key: "heart" },
+                    { label: "Base Notes", notes: product.scentNotes?.base || [], key: "base" },
+                  ].map(({ label, notes, key }) =>
+                    notes.length > 0 ? (
+                      <div key={label} className={`bg-gradient-to-r ${noteGradients[key]} rounded-xl p-4 border border-mist/30`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`w-2 h-2 rounded-full ${noteDots[key]}`} />
+                          <p className="text-xs text-charcoal/50 font-medium">{label}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {notes.map((note) => (
+                            <span
+                              key={note}
+                              className="px-4 py-1.5 bg-white/60 backdrop-blur rounded-full text-xs text-charcoal/60 border border-mist/30 shadow-sm"
+                            >
+                              {note}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              )}
 
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -340,10 +387,16 @@ export default function ProductPage() {
             <div className="max-w-7xl mx-auto px-5 py-3 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-14 bg-mist rounded-xl overflow-hidden shrink-0">
-                  <div
-                    className="w-full h-full bg-cover bg-center"
-                    style={{ backgroundImage: `url(${product.images[0]})` }}
-                  />
+                  {hasImages ? (
+                    <div
+                      className="w-full h-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${product.images[0]})` }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: placeholderGradient }}>
+                      <Sparkles className="w-4 h-4 text-white/20" />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-serif text-charcoal">{product.name}</p>
@@ -365,7 +418,7 @@ export default function ProductPage() {
 
       {/* Image Zoom Modal */}
       <AnimatePresence>
-        {showZoom && (
+        {showZoom && hasImages && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

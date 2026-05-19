@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ShoppingBag, Heart, Eye, Star } from "lucide-react";
+import { ShoppingBag, Heart } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 import toast from "react-hot-toast";
@@ -40,27 +40,14 @@ const gradients = [
   "linear-gradient(145deg, #1a0010, #3a0020, #5a0030)",
   "linear-gradient(145deg, #00101a, #00203a, #00305a)",
   "linear-gradient(145deg, #10001a, #20003a, #40005a)",
-  "linear-gradient(145deg, #001a10, #003a20, #005a30)",
-  "linear-gradient(145deg, #1a1000, #3a2000, #5a4000)",
-  "linear-gradient(145deg, #1a0010, #2a0020, #3a0030)",
-];
-
-const accentColors = [
-  "#c9953a", "#e8d5a0", "#b76e79", "#8a9a8a",
-  "#c9953a", "#a67c2e", "#d4a574", "#7a8a7a",
-  "#c9953a", "#b8965a", "#c07868", "#6a8a6a",
-  "#c9953a", "#a08050", "#b08070", "#5a7a5a",
-  "#c9953a", "#e8d5a0", "#c09080", "#8a9a8a",
 ];
 
 export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
   const [isHovered, setIsHovered] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const g = gradients[index % gradients.length];
-  const accent = accentColors[index % accentColors.length];
-  const hasValidImage = product.images && product.images[0] && product.images[0].startsWith("http");
+  const hasImage = product.images && product.images[0]?.startsWith("http");
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -71,7 +58,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     }
     addItem({
       productId: product._id, name: product.name, price: product.price,
-      image: product.images[0], volume: product.volume,
+      image: product.images[0] || "", volume: product.volume,
     });
     toast.success(`${product.name} added to cart`);
   };
@@ -82,52 +69,48 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 48 }}
+      initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.6, delay: index * 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.5, delay: index * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link href={`/product/${product.slug}`} className="block">
-        <div className="relative aspect-[3/4] overflow-hidden rounded-xl sm:rounded-2xl mb-3 sm:mb-5 bg-surface card-shadow card-shadow-hover">
+        <div className="relative aspect-[3/4] overflow-hidden rounded-xl mb-3 sm:mb-4">
+          {/* Background gradient (shown when no image or as base) */}
           <div className="absolute inset-0" style={{ background: g }} />
-          <div
-            className={`absolute inset-0 bg-cover bg-center transition-all duration-700 ease-out ${isHovered ? "scale-110" : "scale-100"}`}
-            style={{ backgroundImage: `url(${product.images[0]})` }}
-          />
-          {!imgLoaded && (
-            <div className="absolute inset-0 bg-gradient-to-br from-mist/60 via-mist/30 to-mist/60 animate-pulse" />
-          )}
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            className="absolute inset-0 w-full h-full object-cover opacity-0"
-            onLoad={() => setImgLoaded(true)}
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent z-10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/10 to-transparent z-10" />
 
-          <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex gap-1.5 sm:gap-2">
-            {product.originalPrice && (
-              <span className="bg-gold text-white text-[9px] sm:text-[10px] font-bold tracking-[0.15em] uppercase px-2 sm:px-3 py-1 sm:py-1.5 shadow-lg rounded-md">
+          {/* Product image */}
+          {hasImage && (
+            <>
+              <div
+                className={`absolute inset-0 bg-cover bg-center transition-all duration-500 ${isHovered ? "scale-105" : "scale-100"}`}
+                style={{ backgroundImage: `url(${product.images[0]})` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+            </>
+          )}
+
+          {/* Overlay on hover */}
+          <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300`} />
+
+          {/* Badges */}
+          <div className="absolute top-3 left-3 z-10 flex gap-1.5">
+            {discount > 0 && (
+              <span className="bg-gold text-white text-[9px] font-bold tracking-wider uppercase px-2 py-1 rounded-md shadow-lg">
                 -{discount}%
               </span>
             )}
-            {product.stock > 0 && product.stock <= 5 && (
-              <span className="bg-rosegold/90 text-white text-[9px] sm:text-[10px] font-medium tracking-wider uppercase px-2 sm:px-3 py-1 sm:py-1.5 backdrop-blur-sm shadow-lg rounded-md">
-                Low Stock
-              </span>
-            )}
             {product.stock === 0 && (
-              <span className="bg-ebony/80 text-white/60 text-[9px] sm:text-[10px] font-medium tracking-wider uppercase px-2 sm:px-3 py-1 sm:py-1.5 backdrop-blur-sm shadow-lg rounded-md">
+              <span className="bg-ebony/80 text-white/60 text-[9px] font-medium tracking-wider uppercase px-2 py-1 rounded-md backdrop-blur-sm">
                 Sold Out
               </span>
             )}
           </div>
 
+          {/* Wishlist */}
           <motion.button
             onClick={(e) => {
               e.preventDefault();
@@ -137,80 +120,59 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                 icon: isWishlisted ? "♡" : "♥",
               });
             }}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: isHovered ? 1 : 0, scale: isHovered ? 1 : 0.8 }}
-            transition={{ duration: 0.25 }}
-            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shadow-lg glass-dark"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isHovered ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
             aria-label="Add to wishlist"
           >
             <Heart
-              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${
+              className={`w-3.5 h-3.5 ${
                 isWishlisted ? "text-rosegold fill-rosegold" : "text-white/80"
               }`}
             />
           </motion.button>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isHovered ? 1 : 0 }}
-            transition={{ duration: 0.3 }}
-            className="absolute inset-0 z-10 flex items-center justify-center hidden sm:flex"
-          >
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: isHovered ? 1 : 0.8 }}
-              transition={{ duration: 0.25 }}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center glass-dark"
-            >
-              <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-white/70" />
-            </motion.div>
-          </motion.div>
-
+          {/* Add to cart on hover */}
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: isHovered ? "0%" : "100%" }}
-            transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 z-20"
+            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="absolute bottom-0 left-0 right-0 p-3 z-10"
           >
             <button
               onClick={handleAddToCart}
               disabled={product.stock <= 0}
-              className="w-full py-2.5 sm:py-3.5 glass-dark text-white text-[10px] sm:text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-white/15 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 rounded-lg sm:rounded-xl"
+              className="w-full py-2.5 bg-white/90 backdrop-blur text-charcoal text-[10px] tracking-wider uppercase font-medium hover:bg-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 rounded-lg shadow-lg"
             >
-              <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <ShoppingBag className="w-3 h-3" />
               {product.stock <= 0 ? "Out of Stock" : "Add to Bag"}
             </button>
           </motion.div>
         </div>
 
-        <div className="space-y-1.5 sm:space-y-2.5 px-0.5">
-          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-wrap">
-            <motion.span
-              className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ backgroundColor: accent }}
-              animate={{ scale: isHovered ? 1.5 : 1 }}
-            />
-            <span className="text-[9px] sm:text-[10px] text-charcoal/40 tracking-[0.2em] uppercase font-medium">
-              {product.concentration}
-            </span>
-            <span className="text-[9px] sm:text-[10px] text-charcoal/20">·</span>
-            <span className="text-[9px] sm:text-[10px] text-charcoal/30 tracking-wider">
-              {product.volume}ml
-            </span>
+        <div className="space-y-1.5 px-0.5">
+          <div className="flex items-center gap-2 text-[10px] text-charcoal/40 tracking-wider uppercase">
+            <span>{product.concentration}</span>
+            <span className="text-charcoal/20">·</span>
+            <span>{product.volume}ml</span>
           </div>
-          <h3 className="text-sm sm:text-base font-serif text-charcoal leading-snug group-hover:text-gold transition-colors duration-300 tracking-tight line-clamp-1">
+          <h3 className="text-sm font-serif text-charcoal leading-snug group-hover:text-gold transition-colors duration-200 line-clamp-1">
             {product.name}
           </h3>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-sm sm:text-base font-medium text-charcoal tracking-wide">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-charcoal">
               {formatPrice(product.price)}
             </span>
             {product.originalPrice && (
-              <span className="text-[11px] sm:text-xs text-charcoal/30 line-through">
+              <span className="text-xs text-charcoal/30 line-through">
                 {formatPrice(product.originalPrice)}
               </span>
             )}
           </div>
+          {product.stock > 0 && product.stock <= 5 && (
+            <p className="text-[10px] text-rosegold/60">Only {product.stock} left</p>
+          )}
         </div>
       </Link>
     </motion.div>

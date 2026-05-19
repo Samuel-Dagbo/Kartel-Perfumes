@@ -15,15 +15,16 @@ interface StatsCardProps {
 }
 
 export default function StatsCard({ title, value, subtitle, icon, trend, className, index = 0 }: StatsCardProps) {
-  const [displayValue, setDisplayValue] = useState(0);
-  const [showValue, setShowValue] = useState(false);
+  const [displayValue, setDisplayValue] = useState(() => {
+    if (typeof value !== "number") return 0;
+    return 0;
+  });
+  const [showValue, setShowValue] = useState(typeof value !== "number");
   const isNumeric = typeof value === "number";
   const numericTarget = isNumeric ? (value as number) : 0;
 
   useEffect(() => {
-    if (!isNumeric) { setShowValue(true); return; }
-    setShowValue(false);
-    setDisplayValue(0);
+    if (!isNumeric) return;
     const timeout = setTimeout(() => {
       const duration = 1500;
       const steps = 30;

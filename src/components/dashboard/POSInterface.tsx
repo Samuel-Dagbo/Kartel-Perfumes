@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Plus, Minus, X, ShoppingBag, CreditCard, Banknote, ArrowLeft, Check,
-  Printer, User, Percent,
+  Printer,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
@@ -58,18 +58,19 @@ export default function POSInterface() {
   const searchRef = useRef<HTMLInputElement>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch("/api/products");
-      const data = await res.json();
-      setProducts(data.products ?? data ?? []);
-    } catch {
-      toast.error("Failed to load products");
-    }
-  };
-
   useEffect(() => {
-    fetchProducts();
+    let mounted = true;
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (mounted) {
+          setProducts(data.products ?? data ?? []);
+        }
+      })
+      .catch(() => {
+        if (mounted) toast.error("Failed to load products");
+      });
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {

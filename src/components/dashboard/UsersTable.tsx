@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Shield, User as UserIcon, Mail, Phone, Calendar, AlertTriangle, ToggleLeft, ToggleRight, Filter } from "lucide-react";
+import { Search, Shield, User as UserIcon, Mail, Phone, Calendar, AlertTriangle, ToggleLeft, ToggleRight } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";

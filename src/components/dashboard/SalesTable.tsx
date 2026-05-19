@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, Eye, ShoppingBag, Calendar, User, CreditCard, Banknote, ArrowLeft,
-  Trash2, Download, AlertTriangle, DollarSign, Percent, X,
+  Search, Eye, ShoppingBag, User, Trash2, AlertTriangle, X,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
@@ -40,11 +39,7 @@ interface SalesTableProps {
   onRefresh: () => void;
 }
 
-const paymentIcons: Record<string, typeof CreditCard> = {
-  cash: Banknote,
-  card: CreditCard,
-  transfer: ArrowLeft,
-};
+
 
 const paymentColors: Record<string, string> = {
   cash: "text-sage bg-sage/10 border border-sage/20",

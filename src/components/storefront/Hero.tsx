@@ -8,14 +8,16 @@ const rng = (seed: number) => {
   return x - Math.floor(x);
 };
 
+const round = (n: number, d: number) => Number(n.toFixed(d));
+
 const particles = Array.from({ length: 20 }, (_, i) => ({
-  x: `${5 + rng(i * 137) * 90}%`,
-  y: `${10 + rng(i * 281) * 75}%`,
+  x: `${round(5 + rng(i * 137) * 90, 2)}%`,
+  y: `${round(10 + rng(i * 281) * 75, 2)}%`,
   delay: i * 0.3,
-  size: 1.5 + rng(i * 73) * 5,
-  duration: 5 + rng(i * 199) * 5,
-  yOffset: -30 - rng(i * 311) * 30,
-  repeatDelay: 0.5 + rng(i * 157) * 2,
+  size: round(1.5 + rng(i * 73) * 5, 2),
+  duration: round(5 + rng(i * 199) * 5, 2),
+  yOffset: round(-30 - rng(i * 311) * 30, 2),
+  repeatDelay: round(0.5 + rng(i * 157) * 2, 2),
 }));
 
 const textVariants = {
@@ -87,8 +89,8 @@ export default function Hero() {
           style={{
             left: p.x,
             top: p.y,
-            width: p.size,
-            height: p.size,
+            width: `${p.size}px`,
+            height: `${p.size}px`,
             background: "rgba(232,213,160,0.35)",
             boxShadow: "0 0 10px rgba(232,213,160,0.25)",
           }}

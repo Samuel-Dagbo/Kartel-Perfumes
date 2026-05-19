@@ -84,7 +84,7 @@ export default function UsersPage() {
           animate={{ opacity: 1, y: 0 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4"
         >
-          {statCards.map((card, i) => (
+          {statCards.map((card) => (
             <div key={card.label} className="bg-white rounded-2xl border border-mist/40 p-5 card-shadow hover:border-gold/20 transition-all duration-300">
               <div className="flex items-center justify-between mb-3">
                 <div className={`p-2.5 ${card.bg} rounded-xl`}>

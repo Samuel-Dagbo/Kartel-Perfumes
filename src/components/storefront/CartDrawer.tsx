@@ -1,45 +1,85 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, ShoppingBag, ArrowRight, Truck } from "lucide-react";
+import { X, Minus, Plus, ShoppingBag, ArrowRight, Truck, ChevronLeft, CreditCard } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 
 export default function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, subtotal } = useCartStore();
+  const { items, isOpen, closeCart, removeItem, updateQuantity, subtotal, clearCart } = useCartStore();
   const { data: session } = useSession();
   const [checkingOut, setCheckingOut] = useState(false);
+  const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+
+  const [customerName, setCustomerName] = useState(session?.user?.name || "");
+  const [customerEmail, setCustomerEmail] = useState(session?.user?.email || "");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressCity, setAddressCity] = useState("");
+  const [addressState, setAddressState] = useState("");
+  const [addressZip, setAddressZip] = useState("");
 
   const FREE_SHIPPING_THRESHOLD = 200;
   const shippingProgress = Math.min((subtotal() / FREE_SHIPPING_THRESHOLD) * 100, 100);
 
+  const resetCheckoutForm = () => {
+    setCustomerName(session?.user?.name || "");
+    setCustomerEmail(session?.user?.email || "");
+    setCustomerPhone("");
+    setAddressLine1("");
+    setAddressCity("");
+    setAddressState("");
+    setAddressZip("");
+    setShowCheckoutForm(false);
+  };
+
   const handleCheckout = async () => {
+    if (!showCheckoutForm) {
+      if (items.length === 0) return;
+      setShowCheckoutForm(true);
+      return;
+    }
+
+    if (!customerName || !customerEmail || !addressLine1 || !addressCity || !addressState || !addressZip) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
     setCheckingOut(true);
     try {
-      const customer = session?.user
-        ? { name: session.user.name || "", email: session.user.email || "" }
-        : { name: "Guest Customer", email: "guest@example.com" };
+      const customer = { name: customerName, email: customerEmail, phone: customerPhone || undefined };
 
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, customer }),
+        body: JSON.stringify({
+          items,
+          customer,
+          shippingAddress: {
+            line1: addressLine1,
+            city: addressCity,
+            state: addressState,
+            zip: addressZip,
+            country: "US",
+          },
+        }),
       });
+
       const data = await res.json();
-      if (data.error) { toast.error(data.error); return; }
-      toast.success("Order placed successfully!", { duration: 6000 });
-      if (data.emailSent) {
-        toast(
-          "📬 Check your spam folder if you don't see the confirmation in your inbox.",
-          { duration: 8000, icon: "📬" }
-        );
+      if (!res.ok) {
+        toast.error(data.error || "Checkout failed");
+        return;
       }
-      useCartStore.getState().clearCart();
+
+      toast.success("Order placed successfully!", { duration: 6000 });
+      clearCart();
       closeCart();
+      resetCheckoutForm();
     } catch {
       toast.error("Checkout failed. Please try again.");
     } finally {
@@ -57,7 +97,7 @@ export default function CartDrawer() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="fixed inset-0 bg-black/40 backdrop-blur-md z-50"
-            onClick={closeCart}
+            onClick={() => { if (showCheckoutForm) return; closeCart(); }}
           />
 
           <motion.div
@@ -69,138 +109,224 @@ export default function CartDrawer() {
           >
             <div className="flex items-center justify-between px-6 py-5 border-b border-mist/60">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gold/5 rounded-lg">
-                  <ShoppingBag className="w-5 h-5 text-gold-dark" />
-                </div>
-                <h2 className="text-lg font-serif text-charcoal">Your Bag</h2>
-                <span className="text-xs text-charcoal/30 bg-mist/50 px-2 py-0.5 rounded-full">{items.length}</span>
+                {showCheckoutForm ? (
+                  <button
+                    onClick={() => setShowCheckoutForm(false)}
+                    className="p-2 -ml-2 hover:bg-mist/50 rounded-xl transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-charcoal/40" />
+                  </button>
+                ) : (
+                  <div className="p-2 bg-gold/5 rounded-lg">
+                    <ShoppingBag className="w-5 h-5 text-gold-dark" />
+                  </div>
+                )}
+                <h2 className="text-lg font-serif text-charcoal">
+                  {showCheckoutForm ? "Checkout" : "Your Bag"}
+                </h2>
+                {!showCheckoutForm && (
+                  <span className="text-xs text-charcoal/30 bg-mist/50 px-2 py-0.5 rounded-full">{items.length}</span>
+                )}
               </div>
               <button
-                onClick={closeCart}
+                onClick={() => { closeCart(); resetCheckoutForm(); }}
                 className="p-2 hover:bg-mist/50 rounded-xl transition-colors duration-200"
-                aria-label="Close cart"
+                aria-label="Close"
               >
                 <X className="w-5 h-5 text-charcoal/40" />
               </button>
             </div>
 
-            {items.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-                <div className="w-24 h-24 bg-mist/40 rounded-2xl flex items-center justify-center mb-6">
-                  <ShoppingBag className="w-10 h-10 text-charcoal/15" />
+            {showCheckoutForm ? (
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+                <div>
+                  <h3 className="text-xs tracking-widest uppercase text-charcoal/50 font-medium mb-4">Contact</h3>
+                  <div className="space-y-3">
+                    <Input label="Full Name *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="John Doe" required />
+                    <Input label="Email *" type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="john@example.com" required />
+                    <Input label="Phone (optional)" type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+1 (555) 123-4567" />
+                  </div>
                 </div>
-                <p className="text-charcoal/40 text-sm font-medium mb-1">Your bag is empty</p>
-                <p className="text-charcoal/25 text-xs max-w-[200px]">Discover our collection and add items you love</p>
-                <Button variant="outline" size="sm" className="mt-8" onClick={closeCart}>
-                  Continue Shopping
-                </Button>
+
+                <div className="h-px bg-mist/60" />
+
+                <div>
+                  <h3 className="text-xs tracking-widest uppercase text-charcoal/50 font-medium mb-4">Shipping Address</h3>
+                  <div className="space-y-3">
+                    <Input label="Street Address *" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="123 Main St" required />
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input label="City *" value={addressCity} onChange={(e) => setAddressCity(e.target.value)} placeholder="New York" required />
+                      <Input label="State *" value={addressState} onChange={(e) => setAddressState(e.target.value)} placeholder="NY" required />
+                    </div>
+                    <Input label="ZIP Code *" value={addressZip} onChange={(e) => setAddressZip(e.target.value)} placeholder="10001" required />
+                  </div>
+                </div>
+
+                <div className="h-px bg-mist/60" />
+
+                <div className="space-y-2 bg-mist/30 rounded-xl p-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-charcoal/50">Subtotal ({items.length} items)</span>
+                    <span className="text-charcoal font-medium">{formatPrice(subtotal())}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-charcoal/50">Tax</span>
+                    <span className="text-charcoal/50">Calculated at checkout</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-charcoal/50">Shipping</span>
+                    <span className="text-charcoal/50">{subtotal() >= FREE_SHIPPING_THRESHOLD ? "Free" : "Calculated"}</span>
+                  </div>
+                  <div className="h-px bg-mist/60 my-2" />
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-charcoal">Total</span>
+                    <span className="text-lg font-serif text-charcoal">{formatPrice(subtotal())}</span>
+                  </div>
+                </div>
               </div>
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
-                  {items.map((item) => (
-                    <motion.div
-                      key={item.productId}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      layout
-                      className="flex gap-4 p-4 rounded-xl hover:bg-mist/30 transition-all duration-300 group border border-transparent hover:border-mist/50"
-                    >
-                      <div className="w-20 h-24 md:w-24 md:h-28 bg-mist rounded-xl overflow-hidden shrink-0 shadow-sm">
-                        <div
-                          className="w-full h-full bg-cover bg-center"
-                          style={{ backgroundImage: `url(${item.image || '/placeholder.jpg'})` }}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <h3 className="text-sm font-serif text-charcoal truncate pr-2">{item.name}</h3>
-                          <button
-                            onClick={() => removeItem(item.productId)}
-                            className="p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rosegold/10 rounded-lg"
-                            aria-label="Remove item"
-                          >
-                            <X className="w-3.5 h-3.5 text-charcoal/30 hover:text-rosegold" />
-                          </button>
-                        </div>
-                        <p className="text-[11px] text-charcoal/30 mt-1 tracking-wider uppercase">{item.volume}ml</p>
-                        <p className="text-sm font-medium text-charcoal mt-2">{formatPrice(item.price)}</p>
-                        <div className="flex items-center gap-3 mt-3">
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                            className="p-2 rounded-lg hover:bg-mist transition-colors border border-border/50"
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <motion.span
-                            key={item.quantity}
-                            initial={{ scale: 1.2 }}
-                            animate={{ scale: 1 }}
-                            className="text-sm font-medium w-7 text-center"
-                          >
-                            {item.quantity}
-                          </motion.span>
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                            className="p-2 rounded-lg hover:bg-mist transition-colors border border-border/50"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-
-                <div className="border-t border-mist/60 px-6 py-5 space-y-4">
-                  {/* Free shipping progress */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs">
-                      <Truck className="w-3.5 h-3.5 text-charcoal/30" />
-                      {shippingProgress >= 100 ? (
-                        <span className="text-sage font-medium">Free shipping applied!</span>
-                      ) : (
-                        <span className="text-charcoal/40">
-                          {formatPrice(FREE_SHIPPING_THRESHOLD - subtotal())} away from free shipping
-                        </span>
-                      )}
+                {items.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+                    <div className="w-24 h-24 bg-mist/40 rounded-2xl flex items-center justify-center mb-6">
+                      <ShoppingBag className="w-10 h-10 text-charcoal/15" />
                     </div>
-                    <div className="h-1.5 bg-mist/60 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(shippingProgress, 100)}%` }}
-                        transition={{ duration: 0.5, ease: "easeOut" }}
-                        className={`h-full rounded-full ${shippingProgress >= 100 ? "bg-sage" : "bg-gold/40"}`}
-                      />
+                    <p className="text-charcoal/40 text-sm font-medium mb-1">Your bag is empty</p>
+                    <p className="text-charcoal/25 text-xs max-w-[200px]">Discover our collection and add items you love</p>
+                    <Button variant="outline" size="sm" className="mt-8" onClick={closeCart}>
+                      Continue Shopping
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
+                      {items.map((item) => (
+                        <motion.div
+                          key={item.productId}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          layout
+                          className="flex gap-4 p-4 rounded-xl hover:bg-mist/30 transition-all duration-300 group border border-transparent hover:border-mist/50"
+                        >
+                          <div className="w-20 h-24 md:w-24 md:h-28 bg-mist rounded-xl overflow-hidden shrink-0 shadow-sm">
+                            <div
+                              className="w-full h-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${item.image || '/placeholder.jpg'})` }}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between">
+                              <h3 className="text-sm font-serif text-charcoal truncate pr-2">{item.name}</h3>
+                              <button
+                                onClick={() => removeItem(item.productId)}
+                                className="p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rosegold/10 rounded-lg"
+                                aria-label="Remove item"
+                              >
+                                <X className="w-3.5 h-3.5 text-charcoal/30 hover:text-rosegold" />
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-charcoal/30 mt-1 tracking-wider uppercase">{item.volume}ml</p>
+                            <p className="text-sm font-medium text-charcoal mt-2">{formatPrice(item.price)}</p>
+                            <div className="flex items-center gap-3 mt-3">
+                              <button
+                                onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                                className="p-2 rounded-lg hover:bg-mist transition-colors border border-border/50"
+                                aria-label="Decrease quantity"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <motion.span
+                                key={item.quantity}
+                                initial={{ scale: 1.2 }}
+                                animate={{ scale: 1 }}
+                                className="text-sm font-medium w-7 text-center"
+                              >
+                                {item.quantity}
+                              </motion.span>
+                              <button
+                                onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                className="p-2 rounded-lg hover:bg-mist transition-colors border border-border/50"
+                                aria-label="Increase quantity"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
                     </div>
-                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-charcoal/50">Subtotal</span>
-                    <motion.span
-                      key={subtotal()}
-                      initial={{ scale: 1.05 }}
-                      animate={{ scale: 1 }}
-                      className="text-xl font-serif text-charcoal"
-                    >
-                      {formatPrice(subtotal())}
-                    </motion.span>
-                  </div>
-                  <p className="text-[11px] text-charcoal/30">Shipping and taxes calculated at checkout</p>
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="w-full"
-                    onClick={handleCheckout}
-                    loading={checkingOut}
-                    icon={<ArrowRight className="w-4 h-4" />}
-                  >
-                    Checkout
-                  </Button>
-                </div>
+                    <div className="border-t border-mist/60 px-6 py-5 space-y-4">
+                      {/* Free shipping progress */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Truck className="w-3.5 h-3.5 text-charcoal/30" />
+                          {shippingProgress >= 100 ? (
+                            <span className="text-sage font-medium">Free shipping applied!</span>
+                          ) : (
+                            <span className="text-charcoal/40">
+                              {formatPrice(FREE_SHIPPING_THRESHOLD - subtotal())} away from free shipping
+                            </span>
+                          )}
+                        </div>
+                        <div className="h-1.5 bg-mist/60 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min(shippingProgress, 100)}%` }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                            className={`h-full rounded-full ${shippingProgress >= 100 ? "bg-sage" : "bg-gold/40"}`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-charcoal/50">Subtotal</span>
+                        <motion.span
+                          key={subtotal()}
+                          initial={{ scale: 1.05 }}
+                          animate={{ scale: 1 }}
+                          className="text-xl font-serif text-charcoal"
+                        >
+                          {formatPrice(subtotal())}
+                        </motion.span>
+                      </div>
+                      <p className="text-[11px] text-charcoal/30">Shipping and taxes calculated at checkout</p>
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        className="w-full"
+                        onClick={handleCheckout}
+                        icon={<ArrowRight className="w-4 h-4" />}
+                      >
+                        Checkout
+                      </Button>
+                    </div>
+                  </>
+                )}
               </>
+            )}
+
+            {/* Bottom checkout button for form view */}
+            {showCheckoutForm && (
+              <div className="border-t border-mist/60 px-6 py-5">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-charcoal/50">Total</span>
+                  <span className="text-2xl font-serif text-charcoal">{formatPrice(subtotal())}</span>
+                </div>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  onClick={handleCheckout}
+                  loading={checkingOut}
+                  icon={<CreditCard className="w-4 h-4" />}
+                >
+                  Place Order
+                </Button>
+                <p className="text-[10px] text-charcoal/30 text-center mt-3">
+                  By placing this order, you agree to our terms and conditions.
+                </p>
+              </div>
             )}
           </motion.div>
         </>
