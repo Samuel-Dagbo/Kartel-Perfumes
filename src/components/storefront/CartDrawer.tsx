@@ -1,14 +1,25 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, ShoppingBag, ArrowRight, Truck, ChevronLeft, CreditCard } from "lucide-react";
+import { X, Minus, Plus, ShoppingBag, ArrowRight, Truck, ChevronLeft, CreditCard, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
+
+function loadPaystack(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).PaystackPop) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = "https://js.paystack.co/v1/inline.js";
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("Failed to load payment SDK"));
+    document.body.appendChild(s);
+  });
+}
 
 export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, subtotal, clearCart } = useCartStore();
@@ -27,6 +38,10 @@ export default function CartDrawer() {
   const FREE_SHIPPING_THRESHOLD = 200;
   const shippingProgress = Math.min((subtotal() / FREE_SHIPPING_THRESHOLD) * 100, 100);
 
+  const tax = Number((subtotal() * 0.08).toFixed(2));
+  const shipping = subtotal() > FREE_SHIPPING_THRESHOLD ? 0 : 15;
+  const total = Number((subtotal() + tax + shipping).toFixed(2));
+
   const resetCheckoutForm = () => {
     setCustomerName(session?.user?.name || "");
     setCustomerEmail(session?.user?.email || "");
@@ -38,7 +53,7 @@ export default function CartDrawer() {
     setShowCheckoutForm(false);
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = useCallback(async () => {
     if (!showCheckoutForm) {
       if (items.length === 0) return;
       setShowCheckoutForm(true);
@@ -50,42 +65,92 @@ export default function CartDrawer() {
       return;
     }
 
-    setCheckingOut(true);
-    try {
-      const customer = { name: customerName, email: customerEmail, phone: customerPhone || undefined };
+    const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
+    if (!publicKey || publicKey === "pk_test_xxxxxxxxxxxxxxxxxxxxx") {
+      toast.error("Payment is not configured yet. Set NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY in .env.local");
+      return;
+    }
 
-      const res = await fetch("/api/checkout", {
+    setCheckingOut(true);
+
+    try {
+      const initRes = await fetch("/api/paystack/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items,
-          customer,
-          shippingAddress: {
-            line1: addressLine1,
-            city: addressCity,
-            state: addressState,
-            zip: addressZip,
-            country: "US",
-          },
-        }),
+        body: JSON.stringify({ email: customerEmail, amount: total }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Checkout failed");
+      const initData = await initRes.json();
+      if (!initRes.ok) {
+        toast.error(initData.error || "Payment could not be started");
+        setCheckingOut(false);
         return;
       }
 
-      toast.success("Order placed successfully!", { duration: 6000 });
-      clearCart();
-      closeCart();
-      resetCheckoutForm();
-    } catch {
-      toast.error("Checkout failed. Please try again.");
-    } finally {
+      await loadPaystack();
+
+      const handler = (window as any).PaystackPop.setup({
+        key: publicKey,
+        email: customerEmail,
+        amount: Math.round(total * 100),
+        currency: "GHS",
+        ref: initData.reference,
+        channels: ["card", "mobile_money", "bank", "ussd"],
+        onClose: () => {
+          setCheckingOut(false);
+          toast("Payment cancelled. You can try again.", { icon: "🕐" });
+        },
+        callback: async (response: { reference: string }) => {
+          try {
+            const orderRes = await fetch("/api/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items,
+                customer: { name: customerName, email: customerEmail, phone: customerPhone || undefined },
+                shippingAddress: {
+                  line1: addressLine1,
+                  city: addressCity,
+                  state: addressState,
+                  zip: addressZip,
+                  country: "US",
+                },
+                paymentReference: response.reference,
+              }),
+            });
+
+            const orderData = await orderRes.json();
+
+            if (!orderRes.ok) {
+              toast.error(orderData.error || "Order creation failed. Your payment is safe — contact support.");
+              setCheckingOut(false);
+              return;
+            }
+
+            toast.success("Order placed successfully!", { duration: 6000 });
+            clearCart();
+            closeCart();
+            resetCheckoutForm();
+
+            window.location.href = `/order/${orderData.order.orderNumber}`;
+          } catch {
+            toast.error("Something went wrong after payment. Contact support with your reference.");
+            setCheckingOut(false);
+          }
+        },
+      });
+
+      handler.openIframe();
+    } catch (err) {
+      toast.error("Could not start payment. Please try again.");
       setCheckingOut(false);
     }
-  };
+  }, [
+    showCheckoutForm, items, customerName, customerEmail, customerPhone,
+    addressLine1, addressCity, addressState, addressZip, total, clearCart, closeCart,
+  ]);
+
+  const payLabel = checkingOut ? "Processing…" : `Pay ${formatPrice(total)}`;
 
   return (
     <AnimatePresence>
@@ -112,7 +177,8 @@ export default function CartDrawer() {
                 {showCheckoutForm ? (
                   <button
                     onClick={() => setShowCheckoutForm(false)}
-                    className="p-2 -ml-2 hover:bg-mist/50 rounded-xl transition-colors"
+                    disabled={checkingOut}
+                    className="p-2 -ml-2 hover:bg-mist/50 rounded-xl transition-colors disabled:opacity-30"
                   >
                     <ChevronLeft className="w-5 h-5 text-charcoal/40" />
                   </button>
@@ -130,7 +196,8 @@ export default function CartDrawer() {
               </div>
               <button
                 onClick={() => { closeCart(); resetCheckoutForm(); }}
-                className="p-2 hover:bg-mist/50 rounded-xl transition-colors duration-200"
+                disabled={checkingOut}
+                className="p-2 hover:bg-mist/50 rounded-xl transition-colors duration-200 disabled:opacity-30"
                 aria-label="Close"
               >
                 <X className="w-5 h-5 text-charcoal/40" />
@@ -142,9 +209,9 @@ export default function CartDrawer() {
                 <div>
                   <h3 className="text-xs tracking-widest uppercase text-charcoal/50 font-medium mb-4">Contact</h3>
                   <div className="space-y-3">
-                    <Input label="Full Name *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="John Doe" required />
-                    <Input label="Email *" type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="john@example.com" required />
-                    <Input label="Phone (optional)" type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+1 (555) 123-4567" />
+                    <Input label="Full Name *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="John Doe" disabled={checkingOut} required />
+                    <Input label="Email *" type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="john@example.com" disabled={checkingOut} required />
+                    <Input label="Phone (optional)" type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+233 55 123 4567" disabled={checkingOut} />
                   </div>
                 </div>
 
@@ -153,12 +220,12 @@ export default function CartDrawer() {
                 <div>
                   <h3 className="text-xs tracking-widest uppercase text-charcoal/50 font-medium mb-4">Shipping Address</h3>
                   <div className="space-y-3">
-                    <Input label="Street Address *" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="123 Main St" required />
+                    <Input label="Street Address *" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="123 Main St" disabled={checkingOut} required />
                     <div className="grid grid-cols-2 gap-3">
-                      <Input label="City *" value={addressCity} onChange={(e) => setAddressCity(e.target.value)} placeholder="New York" required />
-                      <Input label="State *" value={addressState} onChange={(e) => setAddressState(e.target.value)} placeholder="NY" required />
+                      <Input label="City *" value={addressCity} onChange={(e) => setAddressCity(e.target.value)} placeholder="Accra" disabled={checkingOut} required />
+                      <Input label="Region *" value={addressState} onChange={(e) => setAddressState(e.target.value)} placeholder="Greater Accra" disabled={checkingOut} required />
                     </div>
-                    <Input label="ZIP Code *" value={addressZip} onChange={(e) => setAddressZip(e.target.value)} placeholder="10001" required />
+                    <Input label="ZIP / Postal Code *" value={addressZip} onChange={(e) => setAddressZip(e.target.value)} placeholder="00233" disabled={checkingOut} required />
                   </div>
                 </div>
 
@@ -170,18 +237,23 @@ export default function CartDrawer() {
                     <span className="text-charcoal font-medium">{formatPrice(subtotal())}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-charcoal/50">Tax</span>
-                    <span className="text-charcoal/50">Calculated at checkout</span>
+                    <span className="text-charcoal/50">Tax (8%)</span>
+                    <span className="text-charcoal font-medium">{formatPrice(tax)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-charcoal/50">Shipping</span>
-                    <span className="text-charcoal/50">{subtotal() >= FREE_SHIPPING_THRESHOLD ? "Free" : "Calculated"}</span>
+                    <span className="text-charcoal font-medium">{shipping === 0 ? "Free" : formatPrice(shipping)}</span>
                   </div>
                   <div className="h-px bg-mist/60 my-2" />
                   <div className="flex justify-between">
                     <span className="text-sm font-medium text-charcoal">Total</span>
-                    <span className="text-lg font-serif text-charcoal">{formatPrice(subtotal())}</span>
+                    <span className="text-lg font-serif text-charcoal">{formatPrice(total)}</span>
                   </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 text-[11px] text-charcoal/30">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Secured by Paystack — card, mobile money, bank &amp; USSD</span>
                 </div>
               </div>
             ) : (
@@ -257,7 +329,6 @@ export default function CartDrawer() {
                     </div>
 
                     <div className="border-t border-mist/60 px-6 py-5 space-y-4">
-                      {/* Free shipping progress */}
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-xs">
                           <Truck className="w-3.5 h-3.5 text-charcoal/30" />
@@ -306,22 +377,17 @@ export default function CartDrawer() {
               </>
             )}
 
-            {/* Bottom checkout button for form view */}
             {showCheckoutForm && (
               <div className="border-t border-mist/60 px-6 py-5">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-charcoal/50">Total</span>
-                  <span className="text-2xl font-serif text-charcoal">{formatPrice(subtotal())}</span>
-                </div>
                 <Button
                   variant="primary"
                   size="lg"
                   className="w-full"
                   onClick={handleCheckout}
                   loading={checkingOut}
-                  icon={<CreditCard className="w-4 h-4" />}
+                  icon={!checkingOut ? <CreditCard className="w-4 h-4" /> : undefined}
                 >
-                  Place Order
+                  {payLabel}
                 </Button>
                 <p className="text-[10px] text-charcoal/30 text-center mt-3">
                   By placing this order, you agree to our terms and conditions.

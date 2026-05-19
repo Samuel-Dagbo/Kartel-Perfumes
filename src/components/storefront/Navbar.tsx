@@ -74,13 +74,22 @@ export default function Navbar() {
                 </Link>
               ))}
               {isAuth && (
-                <Link
-                  href="/dashboard"
-                  className="text-xs tracking-[0.2em] uppercase text-white/70 hover:text-white transition-colors duration-300"
-                  style={{ textShadow: "0 1px 8px rgba(0,0,0,0.2)" }}
-                >
-                  Dashboard
-                </Link>
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="text-xs tracking-[0.2em] uppercase text-white/70 hover:text-white transition-colors duration-300"
+                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.2)" }}
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    href="/orders"
+                    className="text-xs tracking-[0.2em] uppercase text-white/70 hover:text-white transition-colors duration-300"
+                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.2)" }}
+                  >
+                    My Orders
+                  </Link>
+                </>
               )}
             </div>
 
@@ -126,6 +135,14 @@ export default function Navbar() {
                         >
                           <ChevronsRight className="w-4 h-4" />
                           Dashboard
+                        </Link>
+                        <Link
+                          href="/orders"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-5 py-3 text-sm text-charcoal/60 hover:text-charcoal hover:bg-mist/40 transition-all duration-200"
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          My Orders
                         </Link>
                         <button
                           onClick={async () => {
@@ -231,6 +248,9 @@ export default function Navbar() {
                 <>
                   <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 py-3.5 text-sm tracking-[0.2em] uppercase text-white/60 hover:text-white border-b border-white/10 hover:pl-2 transition-all duration-200">
                     <ChevronsRight className="w-4 h-4 text-gold/40" /> Dashboard
+                  </Link>
+                  <Link href="/orders" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 py-3.5 text-sm tracking-[0.2em] uppercase text-white/60 hover:text-white border-b border-white/10 hover:pl-2 transition-all duration-200">
+                    <ShoppingBag className="w-4 h-4 text-gold/40" /> My Orders
                   </Link>
                   <button onClick={async () => { await signOut({ redirect: true, callbackUrl: "/" }); }} className="flex items-center gap-3 w-full text-left py-3.5 text-sm tracking-[0.2em] uppercase text-rosegold/70 hover:text-rosegold hover:pl-2 transition-all duration-200">
                     <LogIn className="w-4 h-4" /> Sign Out

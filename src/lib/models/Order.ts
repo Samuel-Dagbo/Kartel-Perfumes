@@ -19,6 +19,8 @@ export interface IOrder {
   status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
   paymentStatus: "pending" | "paid" | "refunded" | "failed";
   paymentMethod: string;
+  paymentReference?: string;
+  paymentGateway?: string;
   customer: {
     name: string;
     email: string;
@@ -64,6 +66,8 @@ const orderSchema = new Schema<IOrder>(
       default: "pending",
     },
     paymentMethod: { type: String, required: true },
+    paymentReference: { type: String },
+    paymentGateway: { type: String, default: "paystack" },
     customer: {
       name: { type: String, required: true },
       email: { type: String, required: true },
