@@ -1,6 +1,6 @@
 const MAILJET_APIKEY = process.env.MAILJET_APIKEY!;
 const MAILJET_SECRET = process.env.MAILJET_SECRET!;
-const FROM_EMAIL = "perfumeskartel@gmail.com";
+const FROM_EMAIL = "kartelperfumes3@gmail.com";
 const FROM_NAME = "Kartel";
 
 interface SendEmailParams {

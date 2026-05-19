@@ -26,7 +26,7 @@ export function wrapLayout(content: string): string {
               <p style="margin:0 0 8px;font-size:12px;color:#888;letter-spacing:1px;">Kartel &mdash; Artisan Fragrances</p>
               <p style="margin:0;font-size:11px;color:#666;">Crafted in limited batches for the discerning few.</p>
               <p style="margin:16px 0 0;font-size:11px;color:#555;">
-                <a href="mailto:perfumeskartel@gmail.com" style="color:#d4af37;text-decoration:none;">perfumeskartel@gmail.com</a>
+                <a href="mailto:kartelperfumes3@gmail.com" style="color:#d4af37;text-decoration:none;">kartelperfumes3@gmail.com</a>
               </p>
             </td>
           </tr>

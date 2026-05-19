@@ -1,11 +1,20 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "./mongoose";
 import { User } from "./models/User";
 
+async function connectOnce() {
+  await connectToDatabase();
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -43,10 +52,34 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ account, profile }) {
+      if (account?.provider === "google") {
+        await connectOnce();
+        const existingUser = await User.findOne({ email: profile?.email });
+        if (!existingUser && profile?.email) {
+          await User.create({
+            name: profile.name || "Google User",
+            email: profile.email,
+            passwordHash: "",
+            role: "customer",
+            avatar: profile.image || "",
+          });
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
+      }
+      if (account?.provider === "google") {
+        await connectOnce();
+        const dbUser = await User.findOne({ email: token.email });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.id = dbUser._id.toString();
+        }
       }
       return token;
     },
