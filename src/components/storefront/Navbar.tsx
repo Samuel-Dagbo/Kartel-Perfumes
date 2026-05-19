@@ -40,7 +40,7 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-40">
-      <div className="bg-transparent backdrop-blur-md border-b border-white/10">
+      <div className="bg-ebony/95 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
           <div className="flex items-center justify-between h-20 md:h-24">
             <button
