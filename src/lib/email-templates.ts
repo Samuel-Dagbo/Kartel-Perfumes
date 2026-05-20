@@ -49,7 +49,7 @@ export function orderConfirmationTemplate(params: {
       (item) => `
     <tr>
       <td style="padding:12px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;">${item.name} x${item.quantity}</td>
-      <td style="padding:12px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;text-align:right;">$${item.price.toFixed(2)}</td>
+      <td style="padding:12px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;text-align:right;">GHS ${item.price.toFixed(2)}</td>
     </tr>`
     )
     .join("");
@@ -76,7 +76,7 @@ export function orderConfirmationTemplate(params: {
       <tfoot>
         <tr>
           <td style="padding:16px 0 0;font-size:16px;color:#1a1a2e;font-weight:600;">Total</td>
-          <td style="padding:16px 0 0;font-size:16px;color:#1a1a2e;font-weight:600;text-align:right;">$${params.total.toFixed(2)}</td>
+          <td style="padding:16px 0 0;font-size:16px;color:#1a1a2e;font-weight:600;text-align:right;">GHS ${params.total.toFixed(2)}</td>
         </tr>
       </tfoot>
     </table>

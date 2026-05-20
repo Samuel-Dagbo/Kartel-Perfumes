@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const dataUri = `data:${file.type};base64,${base64}`;
 
     const timestamp = Math.round(new Date().getTime() / 1000);
-    const signature = await generateSignature(timestamp, cloudName, apiSecret);
+    const signature = await generateSignature(timestamp, apiSecret);
 
     const uploadFormData = new FormData();
     uploadFormData.append("file", dataUri);
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function generateSignature(timestamp: number, cloudName: string, apiSecret: string): Promise<string> {
+async function generateSignature(timestamp: number, apiSecret: string): Promise<string> {
   const crypto = await import("crypto");
   const toSign = `folder=kartel-perfume&timestamp=${timestamp}${apiSecret}`;
   return crypto.createHash("sha1").update(toSign).digest("hex");

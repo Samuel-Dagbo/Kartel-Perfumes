@@ -266,7 +266,7 @@ export default function SalesTable({ sales, onRefresh }: SalesTableProps) {
           </div>
           <div>
             <p className="text-sm text-charcoal/60">Are you sure you want to delete this sale?</p>
-            <p className="text-xs text-charcoal/40 mt-1">This will not restore product stock. This action cannot be undone.</p>
+            <p className="text-xs text-charcoal/40 mt-1">Product stock will be restored. This action cannot be undone.</p>
           </div>
           <div className="flex gap-3 justify-center">
             <Button variant="danger" size="sm" loading={deleting} onClick={() => handleDelete(deleteConfirm!)}>

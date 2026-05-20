@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 
 function loadPaystack(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if ((window as any).PaystackPop) { resolve(); return; }
+    if ((window as unknown as { PaystackPop?: unknown }).PaystackPop) { resolve(); return; }
     const s = document.createElement("script");
     s.src = "https://js.paystack.co/v1/inline.js";
     s.onload = () => resolve();
@@ -35,14 +35,14 @@ export default function CartDrawer() {
   const [addressState, setAddressState] = useState("");
   const [addressZip, setAddressZip] = useState("");
 
-  const FREE_SHIPPING_THRESHOLD = 200;
+  const FREE_SHIPPING_THRESHOLD = 2000;
   const shippingProgress = Math.min((subtotal() / FREE_SHIPPING_THRESHOLD) * 100, 100);
 
   const tax = Number((subtotal() * 0.08).toFixed(2));
   const shipping = subtotal() > FREE_SHIPPING_THRESHOLD ? 0 : 15;
   const total = Number((subtotal() + tax + shipping).toFixed(2));
 
-  const resetCheckoutForm = () => {
+  const resetCheckoutForm = useCallback(() => {
     setCustomerName(session?.user?.name || "");
     setCustomerEmail(session?.user?.email || "");
     setCustomerPhone("");
@@ -51,7 +51,7 @@ export default function CartDrawer() {
     setAddressState("");
     setAddressZip("");
     setShowCheckoutForm(false);
-  };
+  }, [session?.user?.name, session?.user?.email]);
 
   const handleCheckout = useCallback(async () => {
     if (!showCheckoutForm) {
@@ -89,7 +89,13 @@ export default function CartDrawer() {
 
       await loadPaystack();
 
-      const handler = (window as any).PaystackPop.setup({
+      const PaystackPop = (window as unknown as { PaystackPop?: { setup: (config: Record<string, unknown>) => { openIframe: () => void } } }).PaystackPop;
+      if (!PaystackPop) {
+        toast.error("Payment SDK failed to load");
+        setCheckingOut(false);
+        return;
+      }
+      const handler = PaystackPop.setup({
         key: publicKey,
         email: customerEmail,
         amount: Math.round(total * 100),
@@ -113,7 +119,7 @@ export default function CartDrawer() {
                   city: addressCity,
                   state: addressState,
                   zip: addressZip,
-                  country: "US",
+                  country: "GH",
                 },
                 paymentReference: response.reference,
               }),
@@ -141,13 +147,14 @@ export default function CartDrawer() {
       });
 
       handler.openIframe();
-    } catch (err) {
+    } catch {
       toast.error("Could not start payment. Please try again.");
       setCheckingOut(false);
     }
   }, [
     showCheckoutForm, items, customerName, customerEmail, customerPhone,
     addressLine1, addressCity, addressState, addressZip, total, clearCart, closeCart,
+    resetCheckoutForm,
   ]);
 
   const payLabel = checkingOut ? "Processing…" : `Pay ${formatPrice(total)}`;

@@ -356,7 +356,7 @@ export default function ProductPage() {
               {/* Trust badges */}
               <div className="grid grid-cols-3 gap-5 pt-6 border-t border-mist/40">
                 {[
-                  { icon: Truck, label: "Free Shipping", sub: "On orders over $200" },
+                  { icon: Truck, label: "Free Shipping", sub: "On orders over GHS 2,000" },
                   { icon: Shield, label: "Secure", sub: "Protected payment" },
                   { icon: RotateCcw, label: "Returns", sub: "30-day returns" },
                 ].map(({ icon: Icon, label, sub }) => (

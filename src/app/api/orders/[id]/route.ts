@@ -4,6 +4,40 @@ import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Order } from "@/lib/models/Order";
 
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await connectToDatabase();
+    const { id } = await params;
+
+    const order = await Order.findOne({ orderNumber: id }).lean();
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    if (
+      session.user.role !== "admin" &&
+      session.user.role !== "staff" &&
+      order.customer.email !== session.user.email
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    return NextResponse.json({ order });
+  } catch (error) {
+    console.error("GET /api/orders/[id] error:", error);
+    return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

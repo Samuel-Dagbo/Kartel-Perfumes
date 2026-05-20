@@ -10,7 +10,7 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
-  const credentials = btoa(`${MAILJET_APIKEY}:${MAILJET_SECRET}`);
+  const credentials = Buffer.from(`${MAILJET_APIKEY}:${MAILJET_SECRET}`).toString("base64");
 
   const response = await fetch("https://api.mailjet.com/v3.1/send", {
     method: "POST",

@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       (sum: number, item: { price: number; quantity: number }) => sum + item.price * item.quantity, 0
     );
     const tax = Number((subtotal * 0.08).toFixed(2));
-    const shipping = subtotal > 200 ? 0 : 15;
+    const shipping = subtotal > 2000 ? 0 : 15;
     const total = Number((subtotal + tax + shipping).toFixed(2));
 
     if (Math.abs(verification.amount - total) > 1) {
