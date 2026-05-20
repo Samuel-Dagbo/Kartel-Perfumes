@@ -20,34 +20,21 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchUsers = () => {
-    fetch("/api/users")
-      .then((res) => res.json())
-      .then((data) => {
-        setUsers(data.users ?? []);
-      })
-      .catch(() => {
-        console.error("Failed to fetch users");
-      });
-  };
-
   useEffect(() => {
     let mounted = true;
     fetch("/api/users")
       .then((res) => res.json())
-      .then((data) => {
-        if (mounted) {
-          setUsers(data.users ?? []);
-        }
-      })
-      .catch(() => {
-        console.error("Failed to fetch users");
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+      .then((data) => { if (mounted) { setUsers(data.users ?? []); setLoading(false); } })
+      .catch(() => { if (mounted) { console.error("Failed to fetch users"); setLoading(false); } });
     return () => { mounted = false; };
   }, []);
+
+  const fetchUsers = () => {
+    fetch("/api/users")
+      .then((res) => res.json())
+      .then((data) => setUsers(data.users ?? []))
+      .catch(() => console.error("Failed to fetch users"));
+  };
 
   const admins = users.filter((u) => u.role === "admin").length;
   const staff = users.filter((u) => u.role === "staff").length;

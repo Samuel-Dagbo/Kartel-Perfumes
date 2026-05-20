@@ -290,7 +290,7 @@ export default function CartDrawer() {
                           <div className="w-20 h-24 md:w-24 md:h-28 bg-mist rounded-xl overflow-hidden shrink-0 shadow-sm">
                             <div
                               className="w-full h-full bg-cover bg-center"
-                              style={{ backgroundImage: `url(${item.image || '/placeholder.jpg'})` }}
+                              style={{ backgroundImage: `url(${item.image})` }}
                             />
                           </div>
                           <div className="flex-1 min-w-0">

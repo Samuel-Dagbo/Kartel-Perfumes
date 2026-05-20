@@ -28,34 +28,21 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrders = () => {
-    fetch("/api/orders")
-      .then((res) => res.json())
-      .then((data) => {
-        setOrders(data.orders ?? data ?? []);
-      })
-      .catch(() => {
-        console.error("Failed to fetch orders");
-      });
-  };
-
   useEffect(() => {
     let mounted = true;
     fetch("/api/orders")
       .then((res) => res.json())
-      .then((data) => {
-        if (mounted) {
-          setOrders(data.orders ?? data ?? []);
-        }
-      })
-      .catch(() => {
-        console.error("Failed to fetch orders");
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+      .then((data) => { if (mounted) { setOrders(data.orders ?? data ?? []); setLoading(false); } })
+      .catch(() => { if (mounted) { console.error("Failed to fetch orders"); setLoading(false); } });
     return () => { mounted = false; };
   }, []);
+
+  const fetchOrders = () => {
+    fetch("/api/orders")
+      .then((res) => res.json())
+      .then((data) => setOrders(data.orders ?? data ?? []))
+      .catch(() => console.error("Failed to fetch orders"));
+  };
 
   const pending = orders.filter((o) => o.status === "pending").length;
   const processing = orders.filter((o) => o.status === "processing" || o.status === "confirmed").length;

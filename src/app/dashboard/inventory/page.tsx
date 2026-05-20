@@ -23,34 +23,21 @@ export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProducts = () => {
-    fetch("/api/products?all=true")
-      .then((res) => res.json())
-      .then((data) => {
-        setProducts(data.products ?? data ?? []);
-      })
-      .catch(() => {
-        console.error("Failed to fetch products");
-      });
-  };
-
   useEffect(() => {
     let mounted = true;
     fetch("/api/products?all=true")
       .then((res) => res.json())
-      .then((data) => {
-        if (mounted) {
-          setProducts(data.products ?? data ?? []);
-        }
-      })
-      .catch(() => {
-        console.error("Failed to fetch products");
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+      .then((data) => { if (mounted) { setProducts(data.products ?? data ?? []); setLoading(false); } })
+      .catch(() => { if (mounted) { console.error("Failed to fetch products"); setLoading(false); } });
     return () => { mounted = false; };
   }, []);
+
+  const fetchProducts = () => {
+    fetch("/api/products?all=true")
+      .then((res) => res.json())
+      .then((data) => setProducts(data.products ?? data ?? []))
+      .catch(() => console.error("Failed to fetch products"));
+  };
 
   const totalProducts = products.length;
   const activeProducts = products.filter((p) => p.isActive).length;

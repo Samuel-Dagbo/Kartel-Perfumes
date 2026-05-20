@@ -244,7 +244,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {([...recentSales.slice(0, 3), ...recentOrders.slice(0, 2)] as Array<{ _id?: string; saleNumber?: string; orderNumber?: string; customerName?: string; customer?: { name: string }; createdAt: string; total: number }>).sort(() => -1).slice(0, 5).map((item, i) => (
+                  {([...recentSales.slice(0, 3), ...recentOrders.slice(0, 2)] as Array<{ _id?: string; saleNumber?: string; orderNumber?: string; customerName?: string; customer?: { name: string }; createdAt: string; total: number }>).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5).map((item, i) => (
                     <div key={item._id || i} className="flex items-center justify-between py-2.5 border-b border-mist/20 last:border-0">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.saleNumber ? "bg-gold/10" : "bg-sage/10"}`}>

@@ -33,34 +33,21 @@ export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchSales = () => {
-    fetch("/api/sales")
-      .then((res) => res.json())
-      .then((data) => {
-        setSales(data.sales ?? []);
-      })
-      .catch(() => {
-        console.error("Failed to fetch sales");
-      });
-  };
-
   useEffect(() => {
     let mounted = true;
     fetch("/api/sales")
       .then((res) => res.json())
-      .then((data) => {
-        if (mounted) {
-          setSales(data.sales ?? []);
-        }
-      })
-      .catch(() => {
-        console.error("Failed to fetch sales");
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+      .then((data) => { if (mounted) { setSales(data.sales ?? []); setLoading(false); } })
+      .catch(() => { if (mounted) { console.error("Failed to fetch sales"); setLoading(false); } });
     return () => { mounted = false; };
   }, []);
+
+  const fetchSales = () => {
+    fetch("/api/sales")
+      .then((res) => res.json())
+      .then((data) => setSales(data.sales ?? []))
+      .catch(() => console.error("Failed to fetch sales"));
+  };
 
   const totalRevenue = sales.reduce((sum: number, s: { total: number }) => sum + s.total, 0);
 

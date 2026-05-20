@@ -322,7 +322,7 @@ export default function POSInterface() {
               <div className="w-full aspect-square bg-gradient-to-br from-mist to-mist/50 rounded-xl mb-3 overflow-hidden">
                 <div
                   className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                  style={{ backgroundImage: `url(${product.images[0] || '/placeholder.jpg'})` }}
+                  style={{ backgroundImage: `url(${product.images[0]})` }}
                 />
               </div>
               <p className="text-xs font-medium truncate">{product.name}</p>

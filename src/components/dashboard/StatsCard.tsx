@@ -15,10 +15,7 @@ interface StatsCardProps {
 }
 
 export default function StatsCard({ title, value, subtitle, icon, trend, className, index = 0 }: StatsCardProps) {
-  const [displayValue, setDisplayValue] = useState(() => {
-    if (typeof value !== "number") return 0;
-    return 0;
-  });
+  const [displayValue, setDisplayValue] = useState(0);
   const [showValue, setShowValue] = useState(typeof value !== "number");
   const isNumeric = typeof value === "number";
   const numericTarget = isNumeric ? (value as number) : 0;

@@ -9,7 +9,6 @@ const nextConfig: NextConfig = {
       },
     ],
     dangerouslyAllowSVG: false,
-    contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:;",
   },
   serverExternalPackages: ["mongoose"],
   async headers() {

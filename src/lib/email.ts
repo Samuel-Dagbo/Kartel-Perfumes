@@ -1,5 +1,3 @@
-const MAILJET_APIKEY = process.env.MAILJET_APIKEY!;
-const MAILJET_SECRET = process.env.MAILJET_SECRET!;
 const FROM_EMAIL = "kartelperfumes3@gmail.com";
 const FROM_NAME = "Kartel";
 
@@ -10,7 +8,13 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
-  const credentials = Buffer.from(`${MAILJET_APIKEY}:${MAILJET_SECRET}`).toString("base64");
+  const apiKey = process.env.MAILJET_APIKEY;
+  const secret = process.env.MAILJET_SECRET;
+  if (!apiKey || !secret) {
+    console.error("Mailjet not configured: missing MAILJET_APIKEY or MAILJET_SECRET");
+    return;
+  }
+  const credentials = Buffer.from(`${apiKey}:${secret}`).toString("base64");
 
   const response = await fetch("https://api.mailjet.com/v3.1/send", {
     method: "POST",
