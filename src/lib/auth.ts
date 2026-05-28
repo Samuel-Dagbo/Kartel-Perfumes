@@ -4,6 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "./mongoose";
 import { User } from "./models/User";
+import type { UserRole } from "@/types/next-auth";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -47,7 +48,7 @@ export const authOptions: NextAuthOptions = {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: user.role as UserRole,
           image: user.avatar,
         };
       },
@@ -76,14 +77,14 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user, account }) {
       if (user) {
-        token.role = user.role;
+        token.role = user.role as UserRole;
         token.id = user.id;
       }
       if (account?.provider === "google") {
         await connectToDatabase();
         const dbUser = await User.findOne({ email: token.email });
         if (dbUser) {
-          token.role = dbUser.role;
+          token.role = dbUser.role as UserRole;
           token.id = dbUser._id.toString();
         }
       }
@@ -91,8 +92,8 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role as string;
-        session.user.id = token.id as string;
+        session.user.role = (token.role ?? "customer") as UserRole;
+        session.user.id = token.id ?? "";
       }
       return session;
     },

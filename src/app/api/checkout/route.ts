@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Order } from "@/lib/models/Order";
 import { Product } from "@/lib/models/Product";
@@ -29,6 +31,11 @@ async function verifyPaystack(reference: string): Promise<{ verified: boolean; a
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const body = await req.json();
     const { items, customer, shippingAddress, paymentReference } = body;
@@ -39,6 +46,10 @@ export async function POST(req: NextRequest) {
 
     if (!customer?.name || !customer?.email) {
       return NextResponse.json({ error: "Customer name and email are required" }, { status: 400 });
+    }
+
+    if (customer.email.toLowerCase() !== session.user.email.toLowerCase()) {
+      return NextResponse.json({ error: "Customer email must match your account email" }, { status: 403 });
     }
 
     if (!shippingAddress?.line1 || !shippingAddress?.city || !shippingAddress?.state || !shippingAddress?.zip) {
