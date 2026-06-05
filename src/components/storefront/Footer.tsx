@@ -39,42 +39,42 @@ export default function Footer() {
 <h3 className="text-white font-serif text-xl tracking-[0.15em] mb-6">
 KARTEL
               </h3>
-              <p className="text-xs leading-relaxed text-white/30 max-w-xs font-light">
+              <p className="text-sm leading-relaxed text-white/40 max-w-xs font-light">
                 Artisan perfumery dedicated to the craft of exceptional fragrance.
                 Every bottle tells a story of passion, patience, and artistry.
               </p>
             </div>
 
             <div>
-              <h4 className="text-white/60 text-xs tracking-[0.2em] uppercase mb-6 font-medium">
+              <h4 className="text-white/70 text-sm tracking-[0.2em] uppercase mb-6 font-medium">
                 Collections
               </h4>
               <ul className="space-y-4">
-                <li><Link href="/shop" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">Eau de Parfum</Link></li>
-                <li><Link href="/shop" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">Extrait de Parfum</Link></li>
-                <li><Link href="/shop" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">Discovery Set</Link></li>
+                <li><Link href="/shop" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">Eau de Parfum</Link></li>
+                <li><Link href="/shop" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">Extrait de Parfum</Link></li>
+                <li><Link href="/shop" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">Discovery Set</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white/60 text-xs tracking-[0.2em] uppercase mb-6 font-medium">
+              <h4 className="text-white/70 text-sm tracking-[0.2em] uppercase mb-6 font-medium">
                 Company
               </h4>
               <ul className="space-y-4">
-                <li><Link href="/#about" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">About Us</Link></li>
-                <li><Link href="/#about" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">Craftsmanship</Link></li>
-                <li><Link href="/#about" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">Sustainability</Link></li>
+                <li><Link href="/#about" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">About Us</Link></li>
+                <li><Link href="/#about" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">Craftsmanship</Link></li>
+                <li><Link href="/#about" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">Sustainability</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-white/60 text-xs tracking-[0.2em] uppercase mb-6 font-medium">
+              <h4 className="text-white/70 text-sm tracking-[0.2em] uppercase mb-6 font-medium">
                 Support
               </h4>
               <ul className="space-y-4">
-                <li><Link href="/#about" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">Contact</Link></li>
-                <li><Link href="/#about" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">Shipping</Link></li>
-                <li><Link href="/#about" className="text-xs text-white/40 hover:text-gold transition-colors duration-200">Returns</Link></li>
+                <li><Link href="/#about" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">Contact</Link></li>
+                <li><Link href="/#about" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">Shipping</Link></li>
+                <li><Link href="/#about" className="text-sm text-white/50 hover:text-gold transition-colors duration-200">Returns</Link></li>
               </ul>
             </div>
           </div>
@@ -83,30 +83,30 @@ KARTEL
         <div className="gold-line" />
 
         <div className="py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-white/20">
+          <p className="text-sm text-white/35">
             &copy; {new Date().getFullYear()} Kartel. All rights reserved.
           </p>
-          <p className="text-xs text-white/15">
+          <p className="text-sm text-white/30">
             Built by{" "}
             <a
               href="https://samtechlabs.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/30 hover:text-gold transition-colors duration-200"
+              className="text-white/45 hover:text-gold transition-colors duration-200"
             >
               Samtech Labs
             </a>
           </p>
           <div className="flex items-center gap-6">
-            <span className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer">Instagram</span>
-            <span className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer">Facebook</span>
-            <span className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer">Pinterest</span>
-            <span className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer">Twitter</span>
+            <span className="text-sm text-white/40 hover:text-white/60 transition-colors duration-200 cursor-pointer">Instagram</span>
+            <span className="text-sm text-white/40 hover:text-white/60 transition-colors duration-200 cursor-pointer">Facebook</span>
+            <span className="text-sm text-white/40 hover:text-white/60 transition-colors duration-200 cursor-pointer">Pinterest</span>
+            <span className="text-sm text-white/40 hover:text-white/60 transition-colors duration-200 cursor-pointer">Twitter</span>
             <a
               href="https://www.tiktok.com/@kartel.perfumes?_r=1&_t=ZS-96xF8rDTXRo"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer"
+              className="text-sm text-white/40 hover:text-white/60 transition-colors duration-200 cursor-pointer"
             >
               TikTok
             </a>
