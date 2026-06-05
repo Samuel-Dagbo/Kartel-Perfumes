@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -14,7 +15,6 @@ import {
   ChevronRight,
   LogOut,
   Store,
-  Sparkles,
   Users,
   BarChart3,
   Receipt,
@@ -81,9 +81,13 @@ export default function Sidebar() {
         <div className="flex items-center justify-between p-5 md:p-6 border-b border-white/5">
           {!collapsed && (
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="p-1.5 bg-gold/10 rounded-lg group-hover:bg-gold/20 transition-colors">
-                <Sparkles className="w-5 h-5 text-gold" />
-              </div>
+              <Image
+                src="https://res.cloudinary.com/dvlmnjeru/image/upload/v1780653571/kartel_logo_yclojt.jpg"
+                alt="Kartel Logo"
+                width={210}
+                height={300}
+                className="h-10 w-auto object-contain"
+              />
               <div>
                 <span className="text-base font-serif tracking-[0.15em] block leading-tight">KARTEL</span>
                 <span className="text-[9px] text-white/30 tracking-[0.2em] uppercase">
@@ -94,9 +98,13 @@ export default function Sidebar() {
           )}
           {collapsed && (
             <Link href="/" className="mx-auto group">
-              <div className="p-2 bg-gold/10 rounded-xl group-hover:bg-gold/20 transition-colors">
-                <Sparkles className="w-5 h-5 text-gold" />
-              </div>
+              <Image
+                src="https://res.cloudinary.com/dvlmnjeru/image/upload/v1780653571/kartel_logo_yclojt.jpg"
+                alt="Kartel Logo"
+                width={210}
+                height={300}
+                className="h-7 w-auto object-contain"
+              />
             </Link>
           )}
           <button
