@@ -102,6 +102,14 @@ KARTEL
             <span className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer">Facebook</span>
             <span className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer">Pinterest</span>
             <span className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer">Twitter</span>
+            <a
+              href="https://www.tiktok.com/@kartel.perfumes?_r=1&_t=ZS-96xF8rDTXRo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-white/25 hover:text-white/40 transition-colors duration-200 cursor-pointer"
+            >
+              TikTok
+            </a>
           </div>
         </div>
       </div>
