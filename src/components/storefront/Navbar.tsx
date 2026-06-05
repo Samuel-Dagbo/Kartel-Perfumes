@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu, X, ShoppingBag, User, LogIn, ChevronsRight, Search, Sparkles, Loader2,
@@ -55,10 +56,15 @@ export default function Navbar() {
               )}
             </button>
 
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <span className="text-xl md:text-2xl font-serif tracking-[0.08em] text-white" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
-                <span className="text-gradient-gold">KARTEL</span>
-              </span>
+            <Link href="/" className="flex items-center gap-2.5 group" aria-label="Kartel home">
+              <Image
+                src="https://res.cloudinary.com/dvlmnjeru/image/upload/v1780653571/kartel_logo_yclojt.jpg"
+                alt="Kartel Logo"
+                width={210}
+                height={300}
+                priority
+                className="h-16 md:h-20 w-auto object-contain transition-opacity duration-300 group-hover:opacity-90"
+              />
             </Link>
 
             <div className="hidden md:flex items-center gap-12">
