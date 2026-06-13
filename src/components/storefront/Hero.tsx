@@ -60,7 +60,7 @@ export default function Hero() {
           <div className="absolute inset-0 bg-gradient-to-l from-transparent via-ebony/40 to-ebony z-10" />
           <div
             className="w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1587017539504-67cfbddac569?w=1920&q=80')" }}
+            style={{ backgroundImage: "url('https://res.cloudinary.com/dvlmnjeru/image/upload/v1781355987/Kartel_Perfumes_fdicyd.jpg')" }}
           />
         </motion.div>
       </div>
@@ -70,7 +70,7 @@ export default function Hero() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/90 z-10" />
           <div
             className="w-full h-full bg-cover bg-center"
-            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1587017539504-67cfbddac569?w=1920&q=80')" }}
+            style={{ backgroundImage: "url('https://res.cloudinary.com/dvlmnjeru/image/upload/v1781355987/Kartel_Perfumes_fdicyd.jpg')" }}
           />
         </motion.div>
       </div>
