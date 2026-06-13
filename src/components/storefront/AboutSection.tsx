@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles, Shield, Droplets, Leaf, Quote } from "lucide-react";
 
 const values = [
@@ -23,7 +24,22 @@ const testimonials = [
   },
 ];
 
-export default function AboutSection() {
+const ROTATE_MS = 5500;
+
+export default function AboutSection({ productImages = [] }: { productImages?: string[] }) {
+  const [index, setIndex] = useState(0);
+  const images = productImages.length > 0
+    ? productImages
+    : [
+        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=900&q=80",
+      ];
+
+  useEffect(() => {
+    if (images.length < 2) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % images.length), ROTATE_MS);
+    return () => clearInterval(t);
+  }, [images.length]);
+
   return (
     <section id="about" className="py-24 md:py-32 px-5 sm:px-8 lg:px-10 bg-gradient-to-b from-ivory via-ivory to-mist/30 overflow-hidden">
       <div className="max-w-7xl mx-auto">
@@ -35,16 +51,40 @@ export default function AboutSection() {
             transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="relative"
           >
-            <div className="aspect-[4/5] bg-gradient-to-br from-charcoal to-charcoal-light rounded-2xl overflow-hidden shadow-2xl">
-              <div
-                className="w-full h-full opacity-30 mix-blend-overlay"
-                style={{
-                  backgroundImage: "url('https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=900&q=80')",
-                  backgroundSize: "cover", backgroundPosition: "center",
-                }}
-              />
+            <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl relative bg-charcoal">
+              <AnimatePresence initial={false}>
+                {images.map((src, i) =>
+                  i === index ? (
+                    <motion.div
+                      key={src + i}
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url('${src}')` }}
+                      initial={{ opacity: 0, scale: 1.08 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{
+                        opacity: { duration: 1.6, ease: [0.25, 0.46, 0.45, 0.94] },
+                        scale: { duration: ROTATE_MS / 1000, ease: "linear" },
+                      }}
+                    />
+                  ) : null,
+                )}
+              </AnimatePresence>
+
+              {images.length > 1 && (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
+                  {images.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                        i === index ? "w-6 bg-gold" : "w-1.5 bg-white/60"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-ivory via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-ivory via-transparent to-transparent pointer-events-none" />
             <div className="absolute -bottom-6 -right-6 w-48 h-48 border border-gold/15 rounded-2xl -z-10" />
             <div className="absolute -top-6 -left-6 w-32 h-32 border border-gold/10 rounded-2xl -z-10" />
 
