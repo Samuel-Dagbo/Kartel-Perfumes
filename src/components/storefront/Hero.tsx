@@ -112,7 +112,7 @@ export default function Hero() {
 
       <motion.div
         style={{ opacity }}
-        className="relative z-20 flex items-center h-full pt-20 md:pt-24 px-6 lg:px-12 xl:px-20 2xl:px-28"
+        className="relative z-20 flex items-start h-full pt-24 md:pt-28 pb-12 px-6 lg:px-12 xl:px-20 2xl:px-28"
       >
         <div className="w-full lg:w-[55%] xl:w-[52%]">
           <div className="max-w-2xl">
@@ -130,8 +130,8 @@ export default function Hero() {
             </motion.div>
 
             <motion.div style={{ y: contentY }} className="perspective-1000 mb-8 overflow-visible">
-              <h1 className="font-serif text-white tracking-tight text-4xl sm:text-5xl md:text-7xl lg:text-6xl xl:text-7xl 2xl:text-8xl leading-[0.95]">
-                <span className="flex gap-1 sm:gap-3 md:gap-4 flex-wrap justify-start leading-[1] overflow-visible">
+              <h1 className="font-serif text-white tracking-tight text-4xl sm:text-5xl md:text-7xl lg:text-6xl xl:text-7xl 2xl:text-8xl leading-[0.85] overflow-visible">
+                <span className="flex gap-1 sm:gap-3 md:gap-4 flex-wrap justify-start overflow-visible">
                   {titleText.split("").map((char, i) => (
                     <motion.span
                       key={`t-${i}`}
@@ -139,16 +139,15 @@ export default function Hero() {
                       variants={letterVariants}
                       initial="hidden"
                       animate="visible"
-                      className="inline-block pb-1"
+                      className="inline-block"
                       style={{ textShadow: "0 2px 40px rgba(0,0,0,0.3)" }}
                     >
                       {char === " " ? "\u00A0" : char}
                     </motion.span>
                   ))}
                 </span>
-                <br />
                 <motion.span
-                  className="inline-block shimmer-text pb-2 pr-1"
+                  className="block shimmer-text mt-[0.15em] pb-3 pr-1"
                   initial={{ opacity: 0, y: 40, rotateX: -20 }}
                   animate={{ opacity: 1, y: 0, rotateX: 0 }}
                   transition={{ delay: 0.5, duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] }}
