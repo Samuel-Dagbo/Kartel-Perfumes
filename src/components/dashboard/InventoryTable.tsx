@@ -114,10 +114,26 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
+    const trimmedName = (editingProduct.name || "").trim();
+    if (!trimmedName) {
+      toast.error("Product name is required");
+      return;
+    }
+    const parsedPrice = parseFloat(editingProduct.price.toString());
+    const parsedStock = parseInt(editingProduct.stock.toString());
+    if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+    if (Number.isNaN(parsedStock) || parsedStock < 0) {
+      toast.error("Please enter a valid stock quantity");
+      return;
+    }
     try {
       const body: Record<string, unknown> = {
-        stock: parseInt(editingProduct.stock.toString()),
-        price: parseFloat(editingProduct.price.toString()),
+        name: trimmedName,
+        stock: parsedStock,
+        price: parsedPrice,
       };
       if (editImageUrl) {
         body.images = [editImageUrl];
@@ -127,6 +143,7 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success("Product updated");
         setEditingProduct(null);
@@ -134,7 +151,7 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
         setEditImagePreview(null);
         onRefresh();
       } else {
-        toast.error("Failed to update product");
+        toast.error(data.error || "Failed to update product");
       }
     } catch {
       toast.error("Failed to update product");
@@ -309,7 +326,9 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
       {/* Edit Product Modal */}
       <Modal isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} title="Edit Product">
         <form onSubmit={handleEdit} className="space-y-5">
-          <Input label="Product Name" value={editingProduct?.name || ""} disabled />
+          <Input label="Product Name" value={editingProduct?.name || ""}
+            onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, name: e.target.value } : null)}
+            required maxLength={120} />
 
           {/* Image upload */}
           <div>

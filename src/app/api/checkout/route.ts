@@ -29,6 +29,21 @@ async function verifyPaystack(reference: string): Promise<{ verified: boolean; a
   };
 }
 
+interface CheckoutBody {
+  items?: Array<{ productId: string; name: string; price: number; quantity: number; image: string }>;
+  customer?: { name: string; email: string; phone?: string };
+  shippingAddress?: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    zip: string;
+    country?: string;
+  };
+  paymentMethod?: "paystack" | "cod";
+  paymentReference?: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -37,8 +52,8 @@ export async function POST(req: NextRequest) {
     }
 
     await connectToDatabase();
-    const body = await req.json();
-    const { items, customer, shippingAddress, paymentReference } = body;
+    const body = (await req.json()) as CheckoutBody;
+    const { items, customer, shippingAddress, paymentMethod = "paystack", paymentReference } = body;
 
     if (!items?.length) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -56,17 +71,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Complete shipping address is required" }, { status: 400 });
     }
 
-    if (!paymentReference) {
-      return NextResponse.json({ error: "Payment reference is required" }, { status: 400 });
-    }
+    const subtotal = items.reduce(
+      (sum, item) => sum + item.price * item.quantity, 0
+    );
+    const tax = Number((subtotal * 0.08).toFixed(2));
+    const shipping = subtotal > 2000 ? 0 : 15;
+    const total = Number((subtotal + tax + shipping).toFixed(2));
 
-    const verification = await verifyPaystack(paymentReference);
-    if (!verification.verified) {
-      return NextResponse.json({ error: "Payment verification failed" }, { status: 400 });
-    }
+    let paymentStatus: "pending" | "paid" = "pending";
+    let verifiedReference: string | undefined = paymentReference;
+    let gateway: "paystack" | "cod" = paymentMethod;
 
-    if (verification.email.toLowerCase() !== customer.email.toLowerCase()) {
-      return NextResponse.json({ error: "Payment email mismatch" }, { status: 400 });
+    if (paymentMethod === "paystack") {
+      if (!paymentReference) {
+        return NextResponse.json({ error: "Payment reference is required for online payment" }, { status: 400 });
+      }
+      const verification = await verifyPaystack(paymentReference);
+      if (!verification.verified) {
+        return NextResponse.json({ error: "Payment verification failed" }, { status: 400 });
+      }
+      if (verification.email.toLowerCase() !== customer.email.toLowerCase()) {
+        return NextResponse.json({ error: "Payment email mismatch" }, { status: 400 });
+      }
+      if (Math.abs(verification.amount - total) > 1) {
+        return NextResponse.json({ error: "Payment amount mismatch — please contact support" }, { status: 400 });
+      }
+      paymentStatus = "paid";
+    } else if (paymentMethod === "cod") {
+      verifiedReference = `COD-${Date.now().toString(36).toUpperCase()}`;
+      gateway = "cod";
+    } else {
+      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
     }
 
     for (const item of items) {
@@ -82,26 +117,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const subtotal = items.reduce(
-      (sum: number, item: { price: number; quantity: number }) => sum + item.price * item.quantity, 0
-    );
-    const tax = Number((subtotal * 0.08).toFixed(2));
-    const shipping = subtotal > 2000 ? 0 : 15;
-    const total = Number((subtotal + tax + shipping).toFixed(2));
-
-    if (Math.abs(verification.amount - total) > 1) {
-      return NextResponse.json({ error: "Payment amount mismatch — please contact support" }, { status: 400 });
-    }
-
-    const orderItems = items.map(
-      (item: { productId: string; name: string; price: number; quantity: number; image: string }) => ({
-        product: item.productId,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image || "",
-      })
-    );
+    const orderItems = items.map((item) => ({
+      product: item.productId,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image || "",
+    }));
 
     const order = await Order.create({
       orderNumber: generateOrderNumber(),
@@ -110,11 +132,11 @@ export async function POST(req: NextRequest) {
       tax,
       shipping,
       total,
-      status: "confirmed",
-      paymentStatus: "paid",
-      paymentMethod: "card",
-      paymentReference,
-      paymentGateway: "paystack",
+      status: paymentMethod === "cod" ? "pending" : "confirmed",
+      paymentStatus,
+      paymentMethod: paymentMethod === "cod" ? "cash_on_delivery" : "card",
+      paymentReference: verifiedReference,
+      paymentGateway: gateway,
       customer: {
         name: customer.name,
         email: customer.email,
@@ -126,7 +148,7 @@ export async function POST(req: NextRequest) {
         city: shippingAddress.city,
         state: shippingAddress.state,
         zip: shippingAddress.zip,
-        country: shippingAddress.country || "US",
+        country: shippingAddress.country || "GH",
       },
     });
 
@@ -140,10 +162,12 @@ export async function POST(req: NextRequest) {
       html: orderConfirmationTemplate({
         customerName: customer.name,
         orderNumber: order.orderNumber,
-        items: orderItems.map((i: { name: string; quantity: number; price: number }) => ({
+        items: orderItems.map((i) => ({
           name: i.name, quantity: i.quantity, price: i.price,
         })),
         total,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
       }),
     }).catch((err) => console.error("Order email failed:", err));
 

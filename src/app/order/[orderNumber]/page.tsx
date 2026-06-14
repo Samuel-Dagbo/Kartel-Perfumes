@@ -34,6 +34,12 @@ const statusLabels: Record<string, string> = {
   pending: "Pending", confirmed: "Confirmed", processing: "Processing", shipped: "Shipped", delivered: "Delivered", cancelled: "Cancelled",
 };
 
+const paymentMethodLabels: Record<string, string> = {
+  card: "Card / Mobile Money (Paystack)",
+  cash_on_delivery: "Cash on Delivery",
+  cod: "Cash on Delivery",
+};
+
 const steps = ["pending", "confirmed", "processing", "shipped", "delivered"];
 
 export default function OrderConfirmationPage() {
@@ -186,15 +192,15 @@ export default function OrderConfirmationPage() {
               </div>
               <div>
                 <p className="text-xs text-charcoal/40 tracking-wider uppercase mb-1">Payment</p>
-                <p className="text-charcoal capitalize">{order.paymentMethod}</p>
+                <p className="text-charcoal">{paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</p>
                 <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 capitalize ${
                   order.paymentStatus === "paid" ? "bg-sage/10 text-sage" :
                   order.paymentStatus === "pending" ? "bg-amber-50 text-amber-600" :
                   "bg-mist/50 text-charcoal/40"
                 }`}>{order.paymentStatus}</span>
                 {order.paymentReference && (
-                  <p className="text-[10px] text-charcoal/30 mt-1.5 font-mono">
-                    Ref: {order.paymentReference.slice(0, 14)}…
+                  <p className="text-[10px] text-charcoal/30 mt-1.5 font-mono break-all">
+                    Ref: {order.paymentReference}
                   </p>
                 )}
               </div>

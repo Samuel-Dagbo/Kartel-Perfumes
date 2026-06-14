@@ -254,12 +254,21 @@ body {
 }
 
 .shimmer-text {
-  background: linear-gradient(90deg, var(--color-gold-dark), var(--color-gold-light), var(--color-gold-dark));
+  background: linear-gradient(
+    90deg,
+    var(--color-gold-light) 0%,
+    var(--color-gold-shimmer) 25%,
+    #ffffff 50%,
+    var(--color-gold-shimmer) 75%,
+    var(--color-gold-light) 100%
+  );
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: shimmer-gold 3s linear infinite;
+  color: var(--color-gold-light);
+  text-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
 }
 
 .gold-border-bottom {

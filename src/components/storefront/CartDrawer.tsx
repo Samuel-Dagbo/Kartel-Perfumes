@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, ShoppingBag, ArrowRight, Truck, ChevronLeft, CreditCard, ShieldCheck } from "lucide-react";
+import { X, Minus, Plus, ShoppingBag, ArrowRight, Truck, ChevronLeft, CreditCard, ShieldCheck, Banknote, Wallet } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
@@ -21,8 +21,15 @@ function loadPaystack(): Promise<void> {
   });
 }
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, subtotal, clearCart } = useCartStore();
+  const {
+    items, isOpen, closeCart, removeItem, updateQuantity,
+    subtotal, clearCart, paymentMethod, setPaymentMethod,
+  } = useCartStore();
   const { data: session } = useSession();
   const [checkingOut, setCheckingOut] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
@@ -53,6 +60,52 @@ export default function CartDrawer() {
     setShowCheckoutForm(false);
   }, [session?.user?.name, session?.user?.email]);
 
+  const placeOrder = useCallback(
+    async (overrides: { paymentReference?: string } = {}) => {
+      const orderRes = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items,
+          customer: { name: customerName, email: customerEmail, phone: customerPhone || undefined },
+          shippingAddress: {
+            line1: addressLine1,
+            city: addressCity,
+            state: addressState,
+            zip: addressZip,
+            country: "GH",
+          },
+          paymentMethod,
+          paymentReference: overrides.paymentReference,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) {
+        toast.error(orderData.error || "Order creation failed. Please contact support.");
+        setCheckingOut(false);
+        return false;
+      }
+
+      toast.success(
+        paymentMethod === "cod"
+          ? "Order placed! Pay cash on delivery."
+          : "Order placed successfully!",
+        { duration: 6000 }
+      );
+      clearCart();
+      closeCart();
+      resetCheckoutForm();
+      window.location.href = `/order/${orderData.order.orderNumber}`;
+      return true;
+    },
+    [
+      items, customerName, customerEmail, customerPhone,
+      addressLine1, addressCity, addressState, addressZip,
+      paymentMethod, clearCart, closeCart, resetCheckoutForm,
+    ]
+  );
+
   const handleCheckout = useCallback(async () => {
     if (!showCheckoutForm) {
       if (items.length === 0) return;
@@ -65,15 +118,26 @@ export default function CartDrawer() {
       return;
     }
 
-    const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
-    if (!publicKey || publicKey === "pk_test_xxxxxxxxxxxxxxxxxxxxx") {
-      toast.error("Payment is not configured yet. Set NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY in .env.local");
+    if (!isValidEmail(customerEmail)) {
+      toast.error("Please enter a valid email address");
       return;
     }
 
     setCheckingOut(true);
 
     try {
+      if (paymentMethod === "cod") {
+        await placeOrder();
+        return;
+      }
+
+      const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
+      if (!publicKey || publicKey === "pk_test_xxxxxxxxxxxxxxxxxxxxx") {
+        toast.error("Payment is not configured yet. Set NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY in .env.local");
+        setCheckingOut(false);
+        return;
+      }
+
       const initRes = await fetch("/api/paystack/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,57 +171,26 @@ export default function CartDrawer() {
           toast("Payment cancelled. You can try again.", { icon: "🕐" });
         },
         callback: async (response: { reference: string }) => {
-          try {
-            const orderRes = await fetch("/api/checkout", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                items,
-                customer: { name: customerName, email: customerEmail, phone: customerPhone || undefined },
-                shippingAddress: {
-                  line1: addressLine1,
-                  city: addressCity,
-                  state: addressState,
-                  zip: addressZip,
-                  country: "GH",
-                },
-                paymentReference: response.reference,
-              }),
-            });
-
-            const orderData = await orderRes.json();
-
-            if (!orderRes.ok) {
-              toast.error(orderData.error || "Order creation failed. Your payment is safe — contact support.");
-              setCheckingOut(false);
-              return;
-            }
-
-            toast.success("Order placed successfully!", { duration: 6000 });
-            clearCart();
-            closeCart();
-            resetCheckoutForm();
-
-            window.location.href = `/order/${orderData.order.orderNumber}`;
-          } catch {
-            toast.error("Something went wrong after payment. Contact support with your reference.");
-            setCheckingOut(false);
-          }
+          await placeOrder({ paymentReference: response.reference });
         },
       });
 
       handler.openIframe();
     } catch {
-      toast.error("Could not start payment. Please try again.");
+      toast.error("Could not start checkout. Please try again.");
       setCheckingOut(false);
     }
   }, [
-    showCheckoutForm, items, customerName, customerEmail, customerPhone,
-    addressLine1, addressCity, addressState, addressZip, total, clearCart, closeCart,
-    resetCheckoutForm,
+    showCheckoutForm, items, customerName, customerEmail,
+    addressLine1, addressCity, addressState, addressZip, total,
+    paymentMethod, placeOrder,
   ]);
 
-  const payLabel = checkingOut ? "Processing…" : `Pay ${formatPrice(total)}`;
+  const payLabel = checkingOut
+    ? "Processing…"
+    : paymentMethod === "cod"
+      ? `Place Order — ${formatPrice(total)}`
+      : `Pay ${formatPrice(total)}`;
 
   return (
     <AnimatePresence>
@@ -238,6 +271,54 @@ export default function CartDrawer() {
 
                 <div className="h-px bg-mist/60" />
 
+                <div>
+                  <h3 className="text-xs tracking-widest uppercase text-charcoal/50 font-medium mb-4">Payment Method</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("paystack")}
+                      disabled={checkingOut}
+                      className={`text-left p-4 rounded-xl border transition-all ${
+                        paymentMethod === "paystack"
+                          ? "border-gold bg-gold/5 ring-2 ring-gold/20"
+                          : "border-mist/60 hover:border-gold/30"
+                      } disabled:opacity-50`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${paymentMethod === "paystack" ? "bg-gold/15 text-gold-dark" : "bg-mist/60 text-charcoal/50"}`}>
+                          <CreditCard className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-charcoal">Pay Online</p>
+                          <p className="text-[10px] text-charcoal/40 mt-0.5">Card · Mobile Money · USSD</p>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${paymentMethod === "paystack" ? "border-gold bg-gold" : "border-mist"}`} />
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("cod")}
+                      disabled={checkingOut}
+                      className={`text-left p-4 rounded-xl border transition-all ${
+                        paymentMethod === "cod"
+                          ? "border-gold bg-gold/5 ring-2 ring-gold/20"
+                          : "border-mist/60 hover:border-gold/30"
+                      } disabled:opacity-50`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${paymentMethod === "cod" ? "bg-gold/15 text-gold-dark" : "bg-mist/60 text-charcoal/50"}`}>
+                          <Banknote className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-charcoal">Cash on Delivery</p>
+                          <p className="text-[10px] text-charcoal/40 mt-0.5">Pay when your order arrives</p>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 shrink-0 ${paymentMethod === "cod" ? "border-gold bg-gold" : "border-mist"}`} />
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-2 bg-mist/30 rounded-xl p-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-charcoal/50">Subtotal ({items.length} items)</span>
@@ -259,8 +340,17 @@ export default function CartDrawer() {
                 </div>
 
                 <div className="flex items-center justify-center gap-2 text-[11px] text-charcoal/30">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Secured by Paystack — card, mobile money, bank &amp; USSD</span>
+                  {paymentMethod === "paystack" ? (
+                    <>
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Secured by Paystack — card, mobile money, bank &amp; USSD</span>
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="w-3.5 h-3.5" />
+                      <span>Pay in cash when your order is delivered</span>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -392,7 +482,13 @@ export default function CartDrawer() {
                   className="w-full"
                   onClick={handleCheckout}
                   loading={checkingOut}
-                  icon={!checkingOut ? <CreditCard className="w-4 h-4" /> : undefined}
+                  icon={
+                    !checkingOut
+                      ? paymentMethod === "cod"
+                        ? <Wallet className="w-4 h-4" />
+                        : <CreditCard className="w-4 h-4" />
+                      : undefined
+                  }
                 >
                   {payLabel}
                 </Button>

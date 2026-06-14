@@ -6,7 +6,7 @@ import { ShoppingBag, Heart } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 import toast from "react-hot-toast";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 interface ProductCardProps {
   product: {
@@ -49,6 +49,12 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const g = gradients[index % gradients.length];
   const hasImage = product.images && product.images[0]?.startsWith("http");
 
+  const isTouchDevice = useSyncExternalStore(
+    () => () => {},
+    () => typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0),
+    () => false
+  );
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -66,6 +72,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const discount = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : 0;
+
+  const showOverlay = isHovered || isTouchDevice;
 
   return (
     <motion.div
@@ -94,7 +102,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           )}
 
           {/* Overlay on hover */}
-          <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300`} />
+          <div className={`absolute inset-0 transition-colors duration-300 ${showOverlay ? "bg-black/10" : "bg-black/0"}`} />
 
           {/* Badges */}
           <div className="absolute top-3 left-3 z-10 flex gap-1.5">
@@ -121,7 +129,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               });
             }}
             initial={{ opacity: 0 }}
-            animate={{ opacity: isHovered ? 1 : 0 }}
+            animate={{ opacity: showOverlay ? 1 : 0 }}
             transition={{ duration: 0.2 }}
             className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
             aria-label="Add to wishlist"
@@ -133,10 +141,12 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             />
           </motion.button>
 
-          {/* Add to cart on hover */}
+          {/* Add to cart — always reachable on touch devices */}
           <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: isHovered ? "0%" : "100%" }}
+            initial={false}
+            animate={{
+              y: isTouchDevice ? "0%" : isHovered ? "0%" : "100%",
+            }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="absolute bottom-0 left-0 right-0 p-3 z-10"
           >

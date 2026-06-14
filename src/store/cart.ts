@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export type PaymentMethod = "paystack" | "cod";
+
 export interface CartItem {
   productId: string;
   name: string;
@@ -13,6 +15,7 @@ export interface CartItem {
 interface CartState {
   items: CartItem[];
   isOpen: boolean;
+  paymentMethod: PaymentMethod;
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -20,6 +23,7 @@ interface CartState {
   openCart: () => void;
   closeCart: () => void;
   toggleCart: () => void;
+  setPaymentMethod: (method: PaymentMethod) => void;
   subtotal: () => number;
   itemCount: () => number;
 }
@@ -29,6 +33,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      paymentMethod: "paystack",
 
       addItem: (item) => {
         const existing = get().items.find(
@@ -70,6 +75,7 @@ export const useCartStore = create<CartState>()(
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set({ isOpen: !get().isOpen }),
+      setPaymentMethod: (method) => set({ paymentMethod: method }),
 
       subtotal: () =>
         get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),

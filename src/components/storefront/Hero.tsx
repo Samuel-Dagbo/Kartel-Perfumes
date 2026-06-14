@@ -112,7 +112,7 @@ export default function Hero() {
 
       <motion.div
         style={{ opacity }}
-        className="relative z-20 flex items-center h-full px-6 lg:px-12 xl:px-20 2xl:px-28"
+        className="relative z-20 flex items-center h-full pt-20 md:pt-24 px-6 lg:px-12 xl:px-20 2xl:px-28"
       >
         <div className="w-full lg:w-[55%] xl:w-[52%]">
           <div className="max-w-2xl">
@@ -129,17 +129,17 @@ export default function Hero() {
               </span>
             </motion.div>
 
-            <motion.div style={{ y: contentY }} className="perspective-1000 mb-8">
-              <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-serif text-white leading-[0.85] tracking-tight">
-                <span className="flex gap-2 sm:gap-4 flex-wrap">
+            <motion.div style={{ y: contentY }} className="perspective-1000 mb-8 overflow-visible">
+              <h1 className="font-serif text-white tracking-tight text-4xl sm:text-5xl md:text-7xl lg:text-6xl xl:text-7xl 2xl:text-8xl leading-[0.95]">
+                <span className="flex gap-1 sm:gap-3 md:gap-4 flex-wrap justify-start leading-[1] overflow-visible">
                   {titleText.split("").map((char, i) => (
                     <motion.span
-                      key={i}
+                      key={`t-${i}`}
                       custom={i}
                       variants={letterVariants}
                       initial="hidden"
                       animate="visible"
-                      className="inline-block"
+                      className="inline-block pb-1"
                       style={{ textShadow: "0 2px 40px rgba(0,0,0,0.3)" }}
                     >
                       {char === " " ? "\u00A0" : char}
@@ -147,20 +147,14 @@ export default function Hero() {
                   ))}
                 </span>
                 <br />
-                <span className="flex gap-2 sm:gap-4 flex-wrap">
-                  {subtitleText.split("").map((char, i) => (
-                    <motion.span
-                      key={i}
-                      custom={i + titleText.length}
-                      variants={letterVariants}
-                      initial="hidden"
-                      animate="visible"
-                      className="inline-block shimmer-text"
-                    >
-                      {char === " " ? "\u00A0" : char}
-                    </motion.span>
-                  ))}
-                </span>
+                <motion.span
+                  className="inline-block shimmer-text pb-2 pr-1"
+                  initial={{ opacity: 0, y: 40, rotateX: -20 }}
+                  animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                  transition={{ delay: 0.5, duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] }}
+                >
+                  {subtitleText}
+                </motion.span>
               </h1>
             </motion.div>
 

@@ -184,7 +184,7 @@ export default function Navbar() {
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-gold text-white text-[8px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-gold/20"
+                    className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-gold text-white text-[8px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-gold/20"
                   >
                     {itemCount()}
                   </motion.span>

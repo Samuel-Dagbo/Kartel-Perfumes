@@ -43,6 +43,8 @@ export function orderConfirmationTemplate(params: {
   orderNumber: string;
   items: { name: string; quantity: number; price: number }[];
   total: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
 }): string {
   const itemsHtml = params.items
     .map(
@@ -54,6 +56,16 @@ export function orderConfirmationTemplate(params: {
     )
     .join("");
 
+  const isCod = params.paymentMethod === "cash_on_delivery" || params.paymentMethod === "cod";
+  const paymentLabel = isCod
+    ? "Cash on Delivery"
+    : params.paymentMethod === "card"
+      ? "Card / Mobile Money (Paystack)"
+      : (params.paymentMethod || "Online");
+  const paymentNote = isCod
+    ? `<p style="margin:0 0 16px;padding:14px 16px;background-color:#fff8e6;border-left:3px solid #d4af37;border-radius:6px;font-size:13px;color:#7a6014;line-height:1.5;"><strong>Pay on delivery:</strong> Please have the exact amount ready when your order arrives.</p>`
+    : "";
+
   const content = `
     <h2 style="margin:0 0 8px;font-size:22px;color:#1a1a2e;font-weight:400;">Thank you for your order</h2>
     <p style="margin:0 0 24px;font-size:14px;color:#666;line-height:1.6;">Hi ${params.customerName}, we've received your order and will process it shortly.</p>
@@ -61,7 +73,10 @@ export function orderConfirmationTemplate(params: {
     <div style="background-color:#f9f6f2;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
       <p style="margin:0;font-size:12px;color:#888;letter-spacing:1px;text-transform:uppercase;">Order Reference</p>
       <p style="margin:4px 0 0;font-size:18px;color:#1a1a2e;font-weight:600;">${params.orderNumber}</p>
+      <p style="margin:8px 0 0;font-size:12px;color:#666;">Payment method: <strong>${paymentLabel}</strong></p>
     </div>
+
+    ${paymentNote}
 
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
       <thead>
