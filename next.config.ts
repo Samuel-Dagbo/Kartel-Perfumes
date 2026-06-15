@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' https://js.paystack.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; connect-src 'self' https://api.paystack.co https://api.cloudinary.com https://api.mailjet.com; font-src 'self' data:; frame-src https://js.paystack.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.paystack.co https://checkout.paystack.co https://standard.paystack.co https://auth.paystack.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com https://checkout.paystack.co https://standard.paystack.co; connect-src 'self' https://api.paystack.co https://checkout.paystack.co https://standard.paystack.co https://auth.paystack.co https://api.cloudinary.com https://api.mailjet.com; font-src 'self' data:; frame-src https://js.paystack.co https://checkout.paystack.co https://standard.paystack.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
           },
           {
             key: "X-Frame-Options",
