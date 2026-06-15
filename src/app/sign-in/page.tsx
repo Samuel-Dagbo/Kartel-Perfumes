@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -37,6 +37,10 @@ function SignInForm() {
       return () => clearTimeout(timer);
     }
   }, [errorParam]);
+
+  useEffect(() => {
+    signOut({ redirect: false }).catch(() => undefined);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,22 +95,27 @@ function SignInForm() {
       )}
       <form
         onSubmit={handleSubmit}
+        autoComplete="off"
         className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-mist/50 p-8 md:p-10 space-y-6"
       >
         <Input
           label="Email"
           type="email"
+          name="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="your@email.com"
+          autoComplete="off"
           required
         />
         <Input
           label="Password"
           type={showPassword ? "text" : "password"}
+          name="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter your password"
+          autoComplete="new-password"
           required
           rightIcon={
             showPassword ? (
