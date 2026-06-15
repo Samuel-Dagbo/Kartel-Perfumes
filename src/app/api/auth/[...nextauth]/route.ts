@@ -3,6 +3,9 @@ import { NextRequest } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const handler = NextAuth(authOptions);
 
 export async function GET(req: NextRequest) {
