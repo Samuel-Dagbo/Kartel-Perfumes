@@ -95,7 +95,6 @@ function SignInForm() {
       )}
       <form
         onSubmit={handleSubmit}
-        autoComplete="off"
         className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-mist/50 p-8 md:p-10 space-y-6"
       >
         <Input
@@ -105,7 +104,7 @@ function SignInForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="your@email.com"
-          autoComplete="off"
+          autoComplete="email"
           required
         />
         <Input
@@ -115,7 +114,7 @@ function SignInForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter your password"
-          autoComplete="new-password"
+          autoComplete="current-password"
           required
           rightIcon={
             showPassword ? (
