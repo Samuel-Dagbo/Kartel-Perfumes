@@ -6,16 +6,6 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    const isAuthPage = path.startsWith("/sign-in") || path.startsWith("/sign-up");
-
-    if (isAuthPage && token) {
-      const role = token.role as string;
-      if (role === "admin" || role === "staff") {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
-      }
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-
     if (path.startsWith("/dashboard")) {
       if (!token) {
         const signInUrl = new URL("/sign-in", req.url);
@@ -37,12 +27,12 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ req, token }) => {
+      authorized: ({ req }) => {
         const path = req.nextUrl.pathname;
         if (path.startsWith("/sign-in") || path.startsWith("/sign-up")) {
           return true;
         }
-        return !!token;
+        return true;
       },
     },
   }
