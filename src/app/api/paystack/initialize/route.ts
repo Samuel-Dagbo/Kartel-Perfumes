@@ -4,43 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { Product } from "@/lib/models/Product";
 import { calculateTotals } from "@/lib/constants";
 import { initializePaystackTransaction } from "@/lib/paystack";
+import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 import { errorFromUnknown, parseCartItem } from "@/lib/validation";
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function getClientIp(req: NextRequest) {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (process.env.TRUST_PROXY === "true" && forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
-  }
-  return req.headers.get("x-real-ip") || "unknown";
-}
-
-function rateLimit(key: string, maxAttempts = 10, windowMs = 60_000): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  if (entry.count >= maxAttempts) {
-    return false;
-  }
-  entry.count++;
-  return true;
-}
-
-function validateCSRF(req: NextRequest): boolean {
-  const origin = req.headers.get("origin");
-  const host = req.headers.get("host");
-  if (!origin) return true;
-  try {
-    const originUrl = new URL(origin);
-    return originUrl.host === host;
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!rateLimit(ip)) {
+    if (!checkRateLimit(ip, 10, 60_000)) {
       return NextResponse.json({ error: "Too many payment requests. Try again later." }, { status: 429 });
     }
 
@@ -99,7 +64,7 @@ export async function POST(req: NextRequest) {
         name: product.name,
         price: product.price,
         quantity: item.quantity,
-        image: product.images[0] || "",
+        image: product.images?.[0] || "",
       });
       subtotal += product.price * item.quantity;
     }

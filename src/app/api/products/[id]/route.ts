@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Product } from "@/lib/models/Product";
+import { AuditLog } from "@/lib/models/AuditLog";
 import { slugify } from "@/lib/utils";
 import { requireRole } from "@/lib/authz";
 import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
@@ -115,7 +116,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Too many product requests. Try again later." }, { status: 429 });
     }
 
-    await requireRole(["admin"]);
+    const { session } = await requireRole(["admin"]);
 
     await connectToDatabase();
     const { id } = await params;
@@ -128,6 +129,16 @@ export async function DELETE(
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
+
+    await AuditLog.create({
+      actor: session.user.id,
+      actorName: session.user.name || "Admin",
+      actorEmail: session.user.email || "",
+      action: "product.delete",
+      targetType: "Product",
+      targetId: id,
+      metadata: { name: product.name, slug: product.slug },
+    });
 
     return NextResponse.json({ message: "Product deleted" });
   } catch (error) {

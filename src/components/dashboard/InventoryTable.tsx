@@ -119,8 +119,8 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
       toast.error("Product name is required");
       return;
     }
-    const parsedPrice = parseFloat(editingProduct.price.toString());
-    const parsedStock = parseInt(editingProduct.stock.toString());
+    const parsedPrice = Number(editingProduct.price) || 0;
+    const parsedStock = Number(editingProduct.stock) || 0;
     if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
       toast.error("Please enter a valid price");
       return;
@@ -352,11 +352,11 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
             </button>
           </div>
 
-          <Input label="Price" type="number" step="0.01" value={editingProduct?.price || ""}
-            onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, price: parseFloat(e.target.value) } : null)} />
-          <Input label="Stock" type="number" value={editingProduct?.stock || ""}
-            onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, stock: parseInt(e.target.value) } : null)} />
-          <div className="flex gap-3 pt-2">
+<Input label="Price" type="number" step="0.01" value={editingProduct?.price ?? ""}
+             onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, price: parseFloat(e.target.value) || editingProduct.price } : null)} />
+           <Input label="Stock" type="number" value={editingProduct?.stock ?? ""}
+             onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, stock: parseInt(e.target.value) || editingProduct.stock } : null)} />
+           <div className="flex gap-3 pt-2">
             <Button type="submit" variant="primary" size="sm" loading={editUploading}>Save Changes</Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setEditingProduct(null)}>Cancel</Button>
           </div>

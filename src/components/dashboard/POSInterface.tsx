@@ -320,10 +320,10 @@ export default function POSInterface() {
               className="bg-white rounded-2xl border border-mist/40 p-4 text-left hover:border-gold/30 hover:shadow-lg hover:shadow-gold/5 transition-all duration-300 group"
             >
               <div className="w-full aspect-square bg-gradient-to-br from-mist to-mist/50 rounded-xl mb-3 overflow-hidden">
-                <div
-                  className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                  style={{ backgroundImage: `url(${product.images[0]})` }}
-                />
+<div
+                      className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                      style={{ backgroundImage: product.images?.[0] ? `url(${product.images[0]})` : undefined }}
+                    />
               </div>
               <p className="text-xs font-medium truncate">{product.name}</p>
               <p className="text-xs text-charcoal/40">{product.volume}ml</p>

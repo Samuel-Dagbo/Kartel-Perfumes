@@ -7,45 +7,10 @@ import { Sale } from "@/lib/models/Sale";
 import { Product } from "@/lib/models/Product";
 import { generateSaleNumber } from "@/lib/utils";
 import { requireRole } from "@/lib/authz";
+import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 import { decrementStock } from "@/lib/stock";
 import { TAX_RATE } from "@/lib/constants";
 import { errorFromUnknown, parseCartItem } from "@/lib/validation";
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function getClientIp(req: NextRequest) {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (process.env.TRUST_PROXY === "true" && forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
-  }
-  return req.headers.get("x-real-ip") || "unknown";
-}
-
-function rateLimit(key: string, maxAttempts = 20, windowMs = 60_000): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  if (entry.count >= maxAttempts) {
-    return false;
-  }
-  entry.count++;
-  return true;
-}
-
-function validateCSRF(req: NextRequest): boolean {
-  const origin = req.headers.get("origin");
-  const host = req.headers.get("host");
-  if (!origin) return true;
-  try {
-    const originUrl = new URL(origin);
-    return originUrl.host === host;
-  } catch {
-    return false;
-  }
-}
 
 function requiredString(value: unknown, field: string, max: number): string | undefined {
   if (value === undefined || value === null || value === "") return undefined;
@@ -97,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!rateLimit(ip)) {
+    if (!checkRateLimit(ip, 20, 60_000)) {
       return NextResponse.json({ error: "Too many sale requests. Try again later." }, { status: 429 });
     }
 
@@ -153,7 +118,7 @@ export async function POST(req: NextRequest) {
         name: product.name,
         price: product.price,
         quantity: item.quantity,
-        image: product.images[0] || "",
+        image: product.images?.[0] || "",
       });
       subtotal += product.price * item.quantity;
     }

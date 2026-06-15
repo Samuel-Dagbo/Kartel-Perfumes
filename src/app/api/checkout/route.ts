@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         name: product.name,
         price: product.price,
         quantity: item.quantity,
-        image: product.images[0] || "",
+        image: product.images?.[0] || "",
       });
       subtotal += product.price * item.quantity;
     }

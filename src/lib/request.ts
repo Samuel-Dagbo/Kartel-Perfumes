@@ -27,7 +27,7 @@ export function checkRateLimit(key: string, maxAttempts = 10, windowMs = 60_000)
 export function validateCSRF(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
   const host = req.headers.get("host");
-  if (!origin) return true;
+  if (!origin) return false;
   try {
     const originUrl = new URL(origin);
     return originUrl.host === host;

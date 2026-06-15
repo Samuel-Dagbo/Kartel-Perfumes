@@ -5,9 +5,13 @@ import { Order } from "@/lib/models/Order";
 import { verifyPaystackTransaction } from "@/lib/paystack";
 
 function verifySignature(body: string, signature: string | null): boolean {
-  if (!process.env.PAYSTACK_SECRET_KEY || !signature) return true;
-  const expected = crypto.createHmac("sha512", process.env.PAYSTACK_SECRET_KEY).update(body).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  if (!secret || !signature) return false;
+  const expected = crypto.createHmac("sha512", secret).update(body).digest("hex");
+  const expectedBuf = Buffer.from(expected);
+  const signatureBuf = Buffer.from(signature);
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, signatureBuf);
 }
 
 export async function POST(req: NextRequest) {

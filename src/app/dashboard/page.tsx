@@ -34,14 +34,22 @@ export default function Dashboard() {
   useEffect(() => {
     let mounted = true;
     fetch("/api/analytics")
-      .then((res) => res.json())
-      .then((analytics) => {
-        if (mounted) {
-          setData(analytics);
-          setLoading(false);
+      .then((res) => {
+        if (!mounted) return null;
+        if (!res.ok) {
+          console.error("/api/analytics returned", res.status);
+          return null;
         }
+        return res.json();
       })
-      .catch(() => {
+      .then((analytics) => {
+        if (mounted && analytics && !analytics.error) {
+          setData(analytics);
+        }
+        if (mounted) setLoading(false);
+      })
+      .catch((err) => {
+        console.error("/api/analytics error:", err);
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };

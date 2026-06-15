@@ -2,42 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongoose";
 import { User } from "@/lib/models/User";
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function getClientIp(req: NextRequest) {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (process.env.TRUST_PROXY === "true" && forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
-  }
-  return req.headers.get("x-real-ip") || "unknown";
-}
-
-function rateLimit(key: string, maxAttempts = 8, windowMs = 60_000): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  if (entry.count >= maxAttempts) {
-    return false;
-  }
-  entry.count++;
-  return true;
-}
-
-function validateCSRF(req: NextRequest): boolean {
-  const origin = req.headers.get("origin");
-  const host = req.headers.get("host");
-  if (!origin) return true;
-  try {
-    const originUrl = new URL(origin);
-    return originUrl.host === host;
-  } catch {
-    return false;
-  }
-}
+import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,7 +11,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!rateLimit(ip)) {
+    if (!checkRateLimit(ip, 8, 60_000)) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
 
