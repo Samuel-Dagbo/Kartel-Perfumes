@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
-import { products as productData, testUsers as userData } from "../src/lib/product-data";
+import { products as productData } from "../src/lib/product-data";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -25,19 +24,6 @@ const productSchema = new mongoose.Schema(
     category: { type: String, required: true },
     stock: { type: Number, default: 0 },
     isFeatured: { type: Boolean, default: false },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true }
-);
-
-const userSchema = new mongoose.Schema(
-  {
-    email: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    passwordHash: { type: String, required: true },
-    role: { type: String, enum: ["admin", "customer", "staff"], default: "customer" },
-    phone: { type: String },
-    avatar: { type: String },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
@@ -96,7 +82,6 @@ const saleSchema = new mongoose.Schema(
 );
 
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
-const User = mongoose.models.User || mongoose.model("User", userSchema);
 const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
 const Sale = mongoose.models.Sale || mongoose.model("Sale", saleSchema);
 
@@ -124,53 +109,6 @@ async function seed() {
     console.log(`  Seeded ${productData.length} products`);
   } else {
     console.log(`  Products already seeded (${productCount}), up to date`);
-  }
-
-  const oldUsers = await User.find({ email: /@maisonnoire\.com$/ });
-  for (const old of oldUsers) {
-    const newEmail = old.email.replace("@maisonnoire.com", "@kartel.com");
-    await User.updateOne({ _id: old._id }, { $set: { email: newEmail } });
-  }
-  if (oldUsers.length > 0) {
-    console.log(`  Migrated ${oldUsers.length} user emails to @kartel.com`);
-  }
-
-  const userCount = await User.countDocuments();
-  if (userCount === 0) {
-    const usersWithHashes = await Promise.all(
-      userData.map(async (u) => ({
-        email: u.email,
-        name: u.name,
-        passwordHash: await bcrypt.hash(u.password, 12),
-        role: u.role,
-        phone: u.phone,
-      }))
-    );
-    await User.insertMany(usersWithHashes);
-    console.log(`  Seeded ${userData.length} test users`);
-  } else {
-    let updatedCount = 0;
-    for (const u of userData) {
-      const existing = await User.findOne({ email: u.email });
-      if (!existing) {
-        await User.create({
-          email: u.email,
-          name: u.name,
-          passwordHash: await bcrypt.hash(u.password, 12),
-          role: u.role,
-          phone: u.phone,
-        });
-        updatedCount++;
-      } else {
-        const needsUpdate = existing.name !== u.name || existing.role !== u.role;
-        if (needsUpdate) {
-          await User.updateOne({ _id: existing._id }, { name: u.name, role: u.role, phone: u.phone });
-          updatedCount++;
-        }
-      }
-    }
-    if (updatedCount > 0) console.log(`  Updated ${updatedCount} existing users`);
-    console.log(`  Users already exist (${userCount}), up to date`);
   }
 
   const allProducts = await Product.find().lean();
@@ -242,11 +180,6 @@ async function seed() {
 
   await mongoose.disconnect();
   console.log("\n  Database seeded successfully!");
-  console.log("──────────────────────────────────────");
-  console.log("  admin@kartel.com / TestAdmin123!");
-  console.log("  staff@kartel.com / TestStaff123!");
-  console.log("  customer@kartel.com / TestCustomer123!");
-  console.log("──────────────────────────────────────");
 }
 
 seed().catch((err) => {

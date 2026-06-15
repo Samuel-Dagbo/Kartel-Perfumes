@@ -6,8 +6,7 @@ import { User } from "./models/User";
 import { Order } from "./models/Order";
 import { Sale } from "./models/Sale";
 import { slugify, generateOrderNumber, generateSaleNumber } from "./utils";
-import { products as productData, testUsers as userData } from "./product-data";
-import bcrypt from "bcryptjs";
+import { products as productData } from "./product-data";
 
 export async function seedDatabase() {
   await connectToDatabase();
@@ -28,61 +27,6 @@ export async function seedDatabase() {
     results.push(`Seeded ${productData.length} products`);
   } else {
     results.push(`Products already seeded (${productCount} existing)`);
-  }
-
-  const oldUsers = await User.find({ email: /@maisonnoire\.com$/ }).lean();
-  for (const old of oldUsers) {
-    const newEmail = old.email.replace("@maisonnoire.com", "@kartel.com");
-    await User.updateOne({ _id: old._id }, { $set: { email: newEmail } });
-  }
-  if (oldUsers.length > 0) {
-    results.push(`Migrated ${oldUsers.length} user emails to @kartel.com`);
-  }
-
-  const userCount = await User.countDocuments();
-  if (userCount === 0) {
-    const usersWithHashes = await Promise.all(
-      userData.map(async (u) => ({
-        email: u.email,
-        name: u.name,
-        passwordHash: await bcrypt.hash(u.password, 12),
-        role: u.role,
-        phone: u.phone,
-      }))
-    );
-    await User.insertMany(usersWithHashes);
-    results.push(`Seeded ${userData.length} test users`);
-  } else {
-    let updatedCount = 0;
-    for (const u of userData) {
-      const existing = await User.findOne({ email: u.email });
-      if (!existing) {
-        await User.create({
-          email: u.email,
-          name: u.name,
-          passwordHash: await bcrypt.hash(u.password, 12),
-          role: u.role,
-          phone: u.phone,
-        });
-        updatedCount++;
-      } else {
-        const needsUpdate =
-          existing.name !== u.name ||
-          existing.role !== u.role;
-        if (needsUpdate) {
-          await User.updateOne({ _id: existing._id }, {
-            name: u.name,
-            role: u.role,
-            phone: u.phone,
-          });
-          updatedCount++;
-        }
-      }
-    }
-    if (updatedCount > 0) {
-      results.push(`Updated ${updatedCount} test users`);
-    }
-    results.push(`Users found (${userCount} existing)`);
   }
 
   const orderCount = await Order.countDocuments();
@@ -178,7 +122,7 @@ export async function seedDatabase() {
     message: results.join(" | "),
     collections: {
       products: productCount || productData.length,
-      users: userCount || userData.length,
+      users: await User.countDocuments(),
     },
   };
 }

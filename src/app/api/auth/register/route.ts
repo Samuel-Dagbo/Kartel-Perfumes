@@ -5,7 +5,15 @@ import { User } from "@/lib/models/User";
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-function rateLimit(key: string, maxAttempts = 5, windowMs = 60_000): boolean {
+function getClientIp(req: NextRequest) {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  if (process.env.TRUST_PROXY === "true" && forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+  return req.headers.get("x-real-ip") || "unknown";
+}
+
+function rateLimit(key: string, maxAttempts = 8, windowMs = 60_000): boolean {
   const now = Date.now();
   const entry = rateLimitMap.get(key);
   if (!entry || now > entry.resetAt) {
@@ -37,19 +45,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
     }
 
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
     if (!rateLimit(ip)) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
 
     await connectToDatabase();
-    const { name, email, password } = await req.json();
+    const body = await req.json();
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const email = typeof body.email === "string" ? body.email.toLowerCase().trim() : "";
+    const password = typeof body.password === "string" ? body.password : "";
 
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: "Name, email, and password are required" },
         { status: 400 }
       );
+    }
+
+    if (name.length > 120 || email.length > 254 || password.length > 128) {
+      return NextResponse.json({ error: "Invalid registration details" }, { status: 400 });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -96,6 +111,7 @@ export async function POST(req: NextRequest) {
       email,
       passwordHash,
       role: "customer",
+      isActive: true,
     });
 
     return NextResponse.json(

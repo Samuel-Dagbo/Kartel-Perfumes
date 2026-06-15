@@ -25,9 +25,16 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password required");
         }
 
+        const email = String(credentials.email).toLowerCase().trim();
+        const password = String(credentials.password);
+
+        if (password.length > 128) {
+          throw new Error("Invalid credentials");
+        }
+
         await connectToDatabase();
 
-        const user = await User.findOne({ email: credentials.email });
+        const user = await User.findOne({ email });
         if (!user) {
           throw new Error("Invalid credentials");
         }
@@ -37,7 +44,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const isValid = await bcrypt.compare(
-          credentials.password,
+          password,
           user.passwordHash
         );
         if (!isValid) {
@@ -58,14 +65,17 @@ export const authOptions: NextAuthOptions = {
     async signIn({ account, profile }) {
       if (account?.provider === "google") {
         await connectToDatabase();
-        const existingUser = await User.findOne({ email: profile?.email });
-        if (!existingUser && profile?.email) {
+        const email = typeof profile?.email === "string" ? profile.email.toLowerCase().trim() : "";
+        const name = typeof profile?.name === "string" ? profile.name : "Google User";
+        const avatar = typeof profile?.image === "string" ? profile.image : "";
+        const existingUser = await User.findOne({ email });
+        if (!existingUser && email) {
           await User.create({
-            name: profile.name || "Google User",
-            email: profile.email,
+            name,
+            email,
             passwordHash: "",
             role: "customer",
-            avatar: profile.image || "",
+            avatar,
             isActive: true,
           });
         }
@@ -82,7 +92,8 @@ export const authOptions: NextAuthOptions = {
       }
       if (account?.provider === "google") {
         await connectToDatabase();
-        const dbUser = await User.findOne({ email: token.email });
+        const email = typeof token.email === "string" ? token.email.toLowerCase().trim() : "";
+        const dbUser = await User.findOne({ email });
         if (dbUser) {
           token.role = dbUser.role as UserRole;
           token.id = dbUser._id.toString();

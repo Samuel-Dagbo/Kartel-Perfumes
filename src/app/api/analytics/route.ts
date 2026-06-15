@@ -41,6 +41,7 @@ export async function GET() {
 
     const sales = rawSales as unknown as Array<{
       _id: string;
+      saleNumber: string;
       total: number;
       subtotal: number;
       tax: number;
@@ -51,8 +52,10 @@ export async function GET() {
 
     const orders = rawOrders as unknown as Array<{
       _id: string;
+      orderNumber: string;
       total: number;
       status: string;
+      paymentStatus: string;
       paymentMethod: string;
       createdAt: Date;
       items: Array<{ name: string; quantity: number; price: number }>;
@@ -63,13 +66,23 @@ export async function GET() {
       ...orders.map((o) => ({ ...o, type: "order" as const })),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    const totalRevenue = allTransactions.reduce((sum, t) => sum + t.total, 0);
+    const paidTransactions = allTransactions.filter((t) => {
+      if (t.type === "sale") return true;
+      return t.paymentStatus === "paid" && t.status !== "cancelled";
+    });
+
+    const totalRevenue = paidTransactions.reduce((sum, t) => sum + t.total, 0);
     const totalTransactions = allTransactions.length;
 
     const recentTransactions = allTransactions.slice(0, 10);
+    const topTransactions = paidTransactions.slice(0, 5);
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayTransactions = paidTransactions.filter((t) => new Date(t.createdAt) >= todayStart);
+    const lowStockCount = rawProducts.filter((p: { stock: number }) => p.stock > 0 && p.stock <= 5).length;
 
     const paymentMethods: Record<string, number> = {};
-    allTransactions.forEach((t) => {
+    paidTransactions.forEach((t) => {
       const method = t.paymentMethod || "unknown";
       paymentMethods[method] = (paymentMethods[method] || 0) + t.total;
     });
@@ -90,12 +103,13 @@ export async function GET() {
       const key = new Date(s.createdAt).toISOString().split("T")[0];
       if (dailyRevenue[key] !== undefined) dailyRevenue[key] += s.total;
     });
-    recentOrders.forEach((o: { total: number; createdAt: Date }) => {
+    recentOrders.forEach((o: { total: number; createdAt: Date; paymentStatus: string; status: string }) => {
+      if (o.paymentStatus !== "paid" || o.status === "cancelled") return;
       const key = new Date(o.createdAt).toISOString().split("T")[0];
       if (dailyRevenue[key] !== undefined) dailyRevenue[key] += o.total;
     });
     Object.entries(dailyRevenue).forEach(([date, revenue]) => {
-      const dayTransactions = allTransactions.filter(
+      const dayTransactions = paidTransactions.filter(
         (t) => new Date(t.createdAt).toISOString().split("T")[0] === date
       );
       last30Days.push({
@@ -106,7 +120,7 @@ export async function GET() {
     });
 
     const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {};
-    [...sales, ...orders].forEach((t) => {
+    paidTransactions.forEach((t) => {
       (t.items || []).forEach((item: { name: string; quantity: number; price: number }) => {
         if (!productSales[item.name]) {
           productSales[item.name] = { name: item.name, quantity: 0, revenue: 0 };
@@ -119,10 +133,10 @@ export async function GET() {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
 
-    const weekAgoRevenue = allTransactions
+    const weekAgoRevenue = paidTransactions
       .filter((t) => new Date(t.createdAt) >= sevenDaysAgo)
       .reduce((sum, t) => sum + t.total, 0);
-    const twoWeeksAgoRevenue = allTransactions
+    const twoWeeksAgoRevenue = paidTransactions
       .filter(
         (t) =>
           new Date(t.createdAt) >= new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) &&
@@ -137,6 +151,11 @@ export async function GET() {
     return NextResponse.json({
       totalRevenue: Math.round(totalRevenue * 100) / 100,
       totalTransactions,
+      totalOrders: orders.length,
+      totalSales: sales.length,
+      todayRevenue: Math.round(todayTransactions.reduce((sum, t) => sum + t.total, 0) * 100) / 100,
+      todayTransactions: todayTransactions.length,
+      lowStockCount,
       totalProducts: rawProducts.length,
       totalUsers: rawUsers.length,
       activeUsers: rawUsers.filter((u: { isActive: boolean }) => u.isActive).length,
@@ -145,8 +164,18 @@ export async function GET() {
       orderStatuses,
       last30Days,
       topProducts,
+      topTransactions: topTransactions.map((t) => ({
+        _id: t._id,
+        type: t.type,
+        title: t.type === "sale" ? t.saleNumber : t.orderNumber,
+        total: t.total,
+        itemCount: (t.items || []).reduce((sum: number, i: { quantity: number }) => sum + i.quantity, 0),
+        paymentMethod: t.paymentMethod,
+        createdAt: t.createdAt,
+      })),
       recentTransactions: recentTransactions.map((t) => ({
         _id: t._id,
+        title: t.type === "sale" ? t.saleNumber : t.orderNumber,
         type: t.type,
         total: t.total,
         itemCount: (t.items || []).reduce((sum: number, i: { quantity: number }) => sum + i.quantity, 0),

@@ -141,7 +141,9 @@ export default function CartDrawer() {
       const initRes = await fetch("/api/paystack/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: customerEmail, amount: total }),
+        body: JSON.stringify({
+          items: items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+        }),
       });
 
       const initData = await initRes.json();
@@ -162,7 +164,7 @@ export default function CartDrawer() {
       const handler = PaystackPop.setup({
         key: publicKey,
         email: customerEmail,
-        amount: Math.round(total * 100),
+        amount: Math.round(initData.amount * 100),
         currency: "GHS",
         ref: initData.reference,
         channels: ["card", "mobile_money", "bank", "ussd"],
@@ -182,7 +184,7 @@ export default function CartDrawer() {
     }
   }, [
     showCheckoutForm, items, customerName, customerEmail,
-    addressLine1, addressCity, addressState, addressZip, total,
+    addressLine1, addressCity, addressState, addressZip,
     paymentMethod, placeOrder,
   ]);
 

@@ -12,63 +12,55 @@ import Button from "@/components/ui/Button";
 import Link from "next/link";
 import { StatsCardSkeleton } from "@/components/ui/Skeleton";
 
+interface Analytics {
+  totalRevenue: number;
+  totalTransactions: number;
+  totalOrders: number;
+  totalSales: number;
+  totalProducts: number;
+  todayRevenue: number;
+  todayTransactions: number;
+  lowStockCount: number;
+  revenueTrend: number;
+  topProducts: Array<{ name: string; quantity: number; revenue: number }>;
+  topTransactions: Array<{ _id: string; title: string; type: "sale" | "order"; total: number; itemCount: number; paymentMethod: string; createdAt: string }>;
+  recentTransactions: Array<{ _id: string; title: string; type: "sale" | "order"; total: number; itemCount: number; paymentMethod: string; createdAt: string }>;
+}
+
 export default function Dashboard() {
-  const [stats, setStats] = useState({
-    totalProducts: 0,
-    totalOrders: 0,
-    totalSales: 0,
-    revenue: 0,
-    todaySales: 0,
-    todayRevenue: 0,
-    lowStockCount: 0,
-  });
-  const [recentSales, setRecentSales] = useState<Array<{ _id: string; saleNumber: string; total: number; createdAt: string; customerName?: string; paymentMethod: string }>>([]);
-  const [recentOrders, setRecentOrders] = useState<Array<{ _id: string; orderNumber: string; total: number; createdAt: string; customer: { name: string }; status: string }>>([]);
+  const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      fetch("/api/products"),
-      fetch("/api/orders"),
-      fetch("/api/sales"),
-    ])
-      .then(([prodRes, orderRes, salesRes]) => Promise.all([prodRes.json(), orderRes.json(), salesRes.json()]))
-      .then(([products, ordersJson, salesJson]) => {
-        if (!mounted) return;
-        
-        const productList = products.products ?? products ?? [];
-        const orderList = ordersJson.orders ?? ordersJson ?? [];
-        const saleList = salesJson.sales ?? salesJson ?? [];
-        const productCount = productList.length;
-        const orderCount = orderList.length;
-        const revenue = saleList.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todaySalesList = saleList.filter((s: { createdAt: string | Date }) => new Date(s.createdAt) >= today);
-        const todayRevenue = todaySalesList.reduce((sum: number, s: { total?: number }) => sum + (s.total || 0), 0);
-        const lowStockCount = productList.filter((p: { stock: number }) => p.stock > 0 && p.stock <= 5).length;
-
-        setStats({
-          totalProducts: productCount,
-          totalOrders: orderCount,
-          totalSales: saleList.length,
-          revenue,
-          todaySales: todaySalesList.length,
-          todayRevenue,
-          lowStockCount,
-        });
-
-        setRecentSales(saleList.slice(0, 5));
-        setRecentOrders(orderList.slice(0, 5));
-        setLoading(false);
+    fetch("/api/analytics")
+      .then((res) => res.json())
+      .then((analytics) => {
+        if (mounted) {
+          setData(analytics);
+          setLoading(false);
+        }
       })
       .catch(() => {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
   }, []);
+
+  const dashboard = data || {
+    totalRevenue: 0,
+    totalTransactions: 0,
+    totalOrders: 0,
+    totalSales: 0,
+    totalProducts: 0,
+    todayRevenue: 0,
+    todayTransactions: 0,
+    lowStockCount: 0,
+    revenueTrend: 0,
+    topProducts: [],
+    topTransactions: [],
+    recentTransactions: [],
+  };
 
   return (
     <div className="space-y-8">
@@ -107,28 +99,28 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <StatsCard
             title="Total Products"
-            value={stats.totalProducts}
+            value={dashboard.totalProducts}
             icon={<Package className="w-5 h-5 text-gold-dark" />}
-            trend={{ value: 12, positive: true }}
+            trend={{ value: dashboard.revenueTrend, positive: dashboard.revenueTrend >= 0 }}
             index={0}
           />
           <StatsCard
             title="Online Orders"
-            value={stats.totalOrders}
+            value={dashboard.totalOrders}
             icon={<ShoppingCart className="w-5 h-5 text-gold-dark" />}
-            trend={{ value: 8, positive: true }}
+            trend={{ value: dashboard.revenueTrend, positive: dashboard.revenueTrend >= 0 }}
             index={1}
           />
           <StatsCard
             title="In-Store Sales"
-            value={stats.totalSales}
+            value={dashboard.totalSales}
             icon={<TrendingUp className="w-5 h-5 text-gold-dark" />}
-            trend={{ value: 5, positive: true }}
+            trend={{ value: dashboard.revenueTrend, positive: dashboard.revenueTrend >= 0 }}
             index={2}
           />
           <StatsCard
             title="Total Revenue"
-            value={formatPrice(stats.revenue)}
+            value={formatPrice(dashboard.totalRevenue)}
             icon={<DollarSign className="w-5 h-5 text-gold-dark" />}
             subtitle="All time"
             index={3}
@@ -157,16 +149,16 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center divide-x divide-mist/40">
               <div className="px-6 text-center">
-                <p className="text-2xl font-serif text-charcoal">{stats.todaySales}</p>
+                <p className="text-2xl font-serif text-charcoal">{dashboard.todayTransactions}</p>
                 <p className="text-[10px] text-charcoal/40 tracking-wider uppercase">Sales</p>
               </div>
               <div className="px-6 text-center">
-                <p className="text-2xl font-serif text-gold-dark">{formatPrice(stats.todayRevenue)}</p>
+                <p className="text-2xl font-serif text-gold-dark">{formatPrice(dashboard.todayRevenue)}</p>
                 <p className="text-[10px] text-charcoal/40 tracking-wider uppercase">Revenue</p>
               </div>
               <div className="px-6 text-center">
-                <p className={`text-2xl font-serif ${stats.lowStockCount > 0 ? "text-rosegold" : "text-sage"}`}>
-                  {stats.lowStockCount}
+                <p className={`text-2xl font-serif ${dashboard.lowStockCount > 0 ? "text-rosegold" : "text-sage"}`}>
+                  {dashboard.lowStockCount}
                 </p>
                 <p className="text-[10px] text-charcoal/40 tracking-wider uppercase">Low Stock</p>
               </div>
@@ -176,6 +168,48 @@ export default function Dashboard() {
                 View Sales
               </Button>
             </Link>
+          </div>
+        </motion.div>
+      )}
+
+      {!loading && dashboard.topProducts.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-2xl border border-mist/40 p-5 md:p-6 card-shadow"
+        >
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 bg-gold/5 rounded-xl flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-gold-dark" />
+            </div>
+            <div>
+              <p className="text-xs text-charcoal/40 tracking-wider uppercase font-medium">Top Sellers</p>
+              <h2 className="text-sm font-medium text-charcoal">Products generating the most revenue</h2>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {dashboard.topProducts.slice(0, 5).map((product, i) => {
+              const maxRevenue = dashboard.topProducts[0]?.revenue || 1;
+              const width = Math.round((product.revenue / maxRevenue) * 100);
+              return (
+                <div key={product.name} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-[10px] font-medium text-charcoal/30 w-4">{i + 1}</span>
+                      <span className="text-charcoal/80 truncate">{product.name}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs text-charcoal/40">{product.quantity} sold</span>
+                      <span className="text-xs font-medium text-charcoal w-20 text-right">{formatPrice(product.revenue)}</span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 bg-mist/50 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-gold/60 to-gold" style={{ width: `${width}%` }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </motion.div>
       )}
@@ -232,7 +266,7 @@ export default function Dashboard() {
                 <h2 className="text-lg font-serif text-charcoal">Recent Activity</h2>
               </div>
 
-              {recentSales.length === 0 && recentOrders.length === 0 ? (
+              {dashboard.recentTransactions.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-14 h-14 bg-mist/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <ShoppingBag className="w-6 h-6 text-charcoal/20" />
@@ -244,11 +278,11 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {([...recentSales.slice(0, 3), ...recentOrders.slice(0, 2)] as Array<{ _id?: string; saleNumber?: string; orderNumber?: string; customerName?: string; customer?: { name: string }; createdAt: string; total: number }>).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5).map((item, i) => (
+                  {dashboard.recentTransactions.slice(0, 5).map((item, i) => (
                     <div key={item._id || i} className="flex items-center justify-between py-2.5 border-b border-mist/20 last:border-0">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.saleNumber ? "bg-gold/10" : "bg-sage/10"}`}>
-                          {item.saleNumber ? (
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.type === "sale" ? "bg-gold/10" : "bg-sage/10"}`}>
+                          {item.type === "sale" ? (
                             <ShoppingBag className="w-3.5 h-3.5 text-gold-dark/60" />
                           ) : (
                             <ShoppingCart className="w-3.5 h-3.5 text-sage/60" />
@@ -256,12 +290,14 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <p className="text-xs font-medium text-charcoal/80">
-                            {item.saleNumber || item.orderNumber}
+                            {item.title}
                           </p>
                           <p className="text-[10px] text-charcoal/40">
-                            {item.customerName || item.customer?.name || "Walk-in"}
-                            <span className="mx-1">·</span>
                             {new Date(item.createdAt).toLocaleDateString("en", { month: "short", day: "numeric" })}
+                            <span className="mx-1">·</span>
+                            {item.itemCount} items
+                            <span className="mx-1">·</span>
+                            {item.paymentMethod}
                           </p>
                         </div>
                       </div>
@@ -280,7 +316,7 @@ export default function Dashboard() {
                   System operational
                 </div>
                 <span className="text-charcoal/30">
-                  {stats.totalProducts} products · {stats.totalOrders} orders · {stats.totalSales} sales
+                  {dashboard.totalProducts} products · {dashboard.totalOrders} orders · {dashboard.totalSales} sales
                 </span>
               </div>
             </div>

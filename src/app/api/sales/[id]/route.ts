@@ -1,39 +1,52 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Sale } from "@/lib/models/Sale";
 import { Product } from "@/lib/models/Product";
+import { requireRole } from "@/lib/authz";
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (session.user.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await requireRole(["admin"]);
 
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Invalid sale id" }, { status: 400 });
+    }
+
     await connectToDatabase();
 
-    const sale = await Sale.findById(id);
-    if (!sale) {
-      return NextResponse.json({ error: "Sale not found" }, { status: 404 });
-    }
+    const dbSession = await mongoose.startSession();
+    try {
+      dbSession.startTransaction();
 
-    for (const item of sale.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.quantity },
-      });
-    }
+      const sale = await Sale.findById(id).session(dbSession);
+      if (!sale) {
+        await dbSession.abortTransaction();
+        return NextResponse.json({ error: "Sale not found" }, { status: 404 });
+      }
 
-    await Sale.findByIdAndDelete(id);
-    return NextResponse.json({ success: true });
+      for (const item of sale.items) {
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: item.quantity } },
+          { session: dbSession }
+        );
+      }
+
+      await Sale.findByIdAndDelete(id, { session: dbSession });
+      await dbSession.commitTransaction();
+
+      return NextResponse.json({ success: true });
+    } catch {
+      await dbSession.abortTransaction();
+      return NextResponse.json({ error: "Failed to delete sale" }, { status: 500 });
+    } finally {
+      dbSession.endSession();
+    }
   } catch (error) {
     console.error("DELETE /api/sales/[id] error:", error);
     return NextResponse.json({ error: "Failed to delete sale" }, { status: 500 });

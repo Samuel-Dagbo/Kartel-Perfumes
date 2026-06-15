@@ -18,6 +18,7 @@ interface Analytics {
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
   recentTransactions: Array<{
     _id: string;
+    title: string;
     type: "sale" | "order";
     total: number;
     itemCount: number;
@@ -268,7 +269,7 @@ export default function AnalyticsPage() {
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${tx.type === "sale" ? "bg-gold" : "bg-sage"}`} />
                     <div>
-                      <p className="text-xs font-medium text-charcoal/70 capitalize">{tx.type}</p>
+                        <p className="text-xs font-medium text-charcoal/70 capitalize">{tx.title}</p>
                       <p className="text-[10px] text-charcoal/30">
                         {new Date(tx.createdAt).toLocaleDateString()} · {tx.itemCount} items · {tx.paymentMethod}
                       </p>

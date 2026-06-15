@@ -4,23 +4,34 @@ import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Product } from "@/lib/models/Product";
 import { slugify } from "@/lib/utils";
+import { requireRole } from "@/lib/authz";
+import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
+import { errorFromUnknown, parseProductBody } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(req.url);
     const includeAll = searchParams.get("all") === "true";
-    
+    const page = Math.max(Number(searchParams.get("page") || 1), 1);
+    const limit = Math.min(Math.max(Number(searchParams.get("limit") || 24), 1), 100);
+
     await connectToDatabase();
-    
-    let products;
-    if (session && (session.user.role === "admin" || session.user.role === "staff") && includeAll) {
-      products = await Product.find().sort({ createdAt: -1 }).lean();
-    } else {
-      products = await Product.find({ isActive: true }).sort({ createdAt: -1 }).lean();
-    }
-    
-    return NextResponse.json({ products });
+
+    const query = session && (session.user.role === "admin" || session.user.role === "staff") && includeAll
+      ? {}
+      : { isActive: true };
+
+    const [products, total] = await Promise.all([
+      Product.find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Product.countDocuments(query),
+    ]);
+
+    return NextResponse.json({ products, total, page, limit });
   } catch (error) {
     console.error("GET /api/products error:", error);
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
@@ -29,27 +40,34 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!validateCSRF(req)) {
+      return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
     }
-    if (session.user.role !== "admin" && session.user.role !== "staff") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const ip = getClientIp(req);
+    if (!checkRateLimit(ip, 30, 60_000)) {
+      return NextResponse.json({ error: "Too many product requests. Try again later." }, { status: 429 });
     }
+
+    await requireRole(["admin", "staff"]);
 
     await connectToDatabase();
     const body = await req.json();
-    const slug = slugify(body.name);
+    const parsed = parseProductBody(body);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
 
+    const slug = slugify(parsed.value.name as string);
     const existing = await Product.findOne({ slug });
     if (existing) {
       return NextResponse.json({ error: "Product with this name already exists" }, { status: 400 });
     }
 
-    const product = await Product.create({ ...body, slug });
+    const product = await Product.create({ ...parsed.value, slug });
     return NextResponse.json({ product }, { status: 201 });
   } catch (error) {
-    console.error("POST /api/products error:", error);
+    console.error("POST /api/products error:", errorFromUnknown(error));
     return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
   }
 }

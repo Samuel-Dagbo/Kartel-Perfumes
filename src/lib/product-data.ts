@@ -18,14 +18,6 @@ export interface ProductData {
   isActive: boolean;
 }
 
-export interface TestUserData {
-  email: string;
-  name: string;
-  password: string;
-  role: "admin" | "customer" | "staff";
-  phone: string;
-}
-
 export const products: ProductData[] = [
   {
     name: "Noir de Nuit",
@@ -187,10 +179,4 @@ export const products: ProductData[] = [
     scentNotes: { top: ["Orange Blossom", "Bergamot", "Green Notes"], heart: ["Neroli", "Jasmine", "Honey"], base: ["Musk", "Sandalwood", "Amber"] },
     concentration: "Eau de Parfum", volume: 75, gender: "female", brand: "Kartel", category: "Eau de Parfum", stock: 21, isFeatured: true, isActive: true,
   },
-];
-
-export const testUsers: TestUserData[] = [
-  { email: "admin@kartel.com", name: "Helene Voss", password: "TestAdmin123!", role: "admin", phone: "+233-20-000-0001" },
-  { email: "staff@kartel.com", name: "Marcus Chen", password: "TestStaff123!", role: "staff", phone: "+233-20-000-0002" },
-  { email: "customer@kartel.com", name: "Isabelle Moreau", password: "TestCustomer123!", role: "customer", phone: "+233-20-000-0003" },
 ];
