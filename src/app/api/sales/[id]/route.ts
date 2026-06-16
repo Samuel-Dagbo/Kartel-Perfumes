@@ -50,10 +50,21 @@ export async function DELETE(
       };
 
       for (const item of sale.items) {
-        await Product.findByIdAndUpdate(
-          item.product,
-          { $inc: { stock: item.quantity } },
-          { session: dbSession }
+        await Product.updateOne(
+          { _id: item.product },
+          [
+            {
+              $set: {
+                stock: {
+                  $add: [
+                    { $ifNull: ["$stock", 0] },
+                    { $ifNull: [item.quantity, 0] },
+                  ],
+                },
+              },
+            },
+          ],
+          { session: dbSession, updatePipeline: true }
         );
       }
 
