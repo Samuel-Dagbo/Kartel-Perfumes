@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import {
   Package, ShoppingCart, DollarSign, TrendingUp, Sparkles,
@@ -30,6 +30,13 @@ interface Analytics {
 export default function Dashboard() {
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const todayLabel = useSyncExternalStore(
+    () => () => {},
+    () =>
+      new Date().toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric" }),
+    () => ""
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -151,7 +158,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-xs text-charcoal/40 tracking-wider uppercase font-medium">Today</p>
                 <p className="text-xs text-charcoal/20">
-                  {new Date().toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric" })}
+                  {todayLabel}
                 </p>
               </div>
             </div>

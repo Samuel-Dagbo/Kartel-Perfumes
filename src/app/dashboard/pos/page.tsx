@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { Store, Package, DollarSign, Clock } from "lucide-react";
 import POSInterface from "@/components/dashboard/POSInterface";
@@ -14,6 +14,12 @@ export default function POSPage() {
       .then((data) => setProductCount(data.total ?? data.products?.length ?? data?.length ?? 0))
       .catch(() => {});
   }, []);
+
+  const now = useSyncExternalStore(
+    () => () => {},
+    () => new Date().toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" }),
+    () => ""
+  );
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -38,7 +44,7 @@ export default function POSPage() {
           </div>
           <div className="flex items-center gap-2 text-white/40">
             <Clock className="w-3.5 h-3.5" />
-            <span className="text-xs">{new Date().toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span className="text-xs">{now || "—"}</span>
           </div>
           <div className="flex items-center gap-2 text-white/40">
             <DollarSign className="w-3.5 h-3.5" />
