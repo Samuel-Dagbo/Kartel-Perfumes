@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Plus, Minus, X, ShoppingBag, CreditCard, Banknote, ArrowLeft, Check,
-  Printer,
+  Printer, ChevronUp,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
@@ -42,6 +42,127 @@ interface SaleData {
   change?: number;
 }
 
+function CartRow({
+  item,
+  onDecrease,
+  onIncrease,
+  onRemove,
+}: {
+  item: CartItem;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex items-center gap-3 p-3 rounded-xl hover:bg-mist/20 transition-colors group"
+    >
+      <div className="w-12 h-12 rounded-lg overflow-hidden bg-mist shrink-0">
+        {item.product.images?.[0] ? (
+          <div
+            className="w-full h-full bg-cover bg-center"
+            style={{ backgroundImage: `url(${item.product.images[0]})` }}
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-mist to-mist/50" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium truncate">{item.product.name}</p>
+        <p className="text-xs text-charcoal/40">{formatPrice(item.product.price)}</p>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onDecrease}
+          className="p-1.5 rounded-lg hover:bg-mist transition-colors border border-mist/40"
+          aria-label="Decrease quantity"
+        >
+          <Minus className="w-3 h-3" />
+        </button>
+        <motion.span
+          key={item.quantity}
+          initial={{ scale: 1.2 }}
+          animate={{ scale: 1 }}
+          className="text-sm font-medium w-6 text-center"
+        >
+          {item.quantity}
+        </motion.span>
+        <button
+          type="button"
+          onClick={onIncrease}
+          className="p-1.5 rounded-lg hover:bg-mist transition-colors border border-mist/40"
+          aria-label="Increase quantity"
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      </div>
+      <p className="text-sm font-medium w-20 text-right hidden sm:block">
+        {formatPrice(item.product.price * item.quantity)}
+      </p>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="p-1.5 hover:bg-rosegold/10 rounded-xl transition-colors"
+        aria-label="Remove item"
+      >
+        <X className="w-3.5 h-3.5 text-rosegold/60" />
+      </button>
+    </motion.div>
+  );
+}
+
+function CartTotals({
+  subtotal,
+  tax,
+  total,
+  disabled,
+  onCheckout,
+}: {
+  subtotal: number;
+  tax: number;
+  total: number;
+  disabled: boolean;
+  onCheckout: () => void;
+}) {
+  return (
+    <div className="border-t border-mist/40 p-5 space-y-4 bg-white">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-charcoal/60">Subtotal</span>
+        <span className="font-medium">{formatPrice(subtotal)}</span>
+      </div>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-charcoal/60">Tax (8%)</span>
+        <span className="font-medium">{formatPrice(tax)}</span>
+      </div>
+      <div className="flex items-center justify-between text-xl font-serif pt-3 border-t border-mist/40">
+        <span>Total</span>
+        <motion.span
+          key={total}
+          initial={{ scale: 1.05 }}
+          animate={{ scale: 1 }}
+          className="text-gold-dark"
+        >
+          {formatPrice(total)}
+        </motion.span>
+      </div>
+      <Button
+        variant="premium"
+        size="lg"
+        className="w-full"
+        disabled={disabled}
+        onClick={onCheckout}
+      >
+        Checkout
+      </Button>
+    </div>
+  );
+}
+
 export default function POSInterface() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -55,12 +176,13 @@ export default function POSInterface() {
   const [processing, setProcessing] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<SaleData | null>(null);
+  const [showMobileCart, setShowMobileCart] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/products")
+    fetch("/api/products?all=true&limit=100")
       .then((res) => res.json())
       .then((data) => {
         if (mounted) {
@@ -294,7 +416,7 @@ export default function POSInterface() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-full">
+    <div className="flex flex-col lg:flex-row gap-6 h-full pb-24 lg:pb-0">
       {/* Product Browser */}
       <div className="flex-1">
         <div className="relative mb-5">
@@ -338,8 +460,8 @@ export default function POSInterface() {
         </div>
       </div>
 
-      {/* Cart Panel */}
-      <div className="w-full lg:w-96 bg-white rounded-2xl border border-mist/40 flex flex-col shadow-sm">
+      {/* Cart Panel — desktop only (lg+) */}
+      <div className="hidden lg:flex w-96 bg-white rounded-2xl border border-mist/40 flex-col shadow-sm">
         <div className="p-5 border-b border-mist/40">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -364,89 +486,128 @@ export default function POSInterface() {
           ) : (
             <AnimatePresence>
               {cart.map((c) => (
-                <motion.div
+                <CartRow
                   key={c.product._id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  layout
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-mist/20 transition-colors group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{c.product.name}</p>
-                    <p className="text-xs text-charcoal/40">{formatPrice(c.product.price)}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => updateQuantity(c.product._id, -1)}
-                      className="p-1.5 rounded-lg hover:bg-mist transition-colors border border-mist/40"
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <motion.span
-                      key={c.quantity}
-                      initial={{ scale: 1.2 }}
-                      animate={{ scale: 1 }}
-                      className="text-sm font-medium w-6 text-center"
-                    >
-                      {c.quantity}
-                    </motion.span>
-                    <button
-                      onClick={() => updateQuantity(c.product._id, 1)}
-                      className="p-1.5 rounded-lg hover:bg-mist transition-colors border border-mist/40"
-                      aria-label="Increase quantity"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <p className="text-sm font-medium w-20 text-right">
-                    {formatPrice(c.product.price * c.quantity)}
-                  </p>
-                  <button
-                    onClick={() => setCart((prev) => prev.filter((x) => x.product._id !== c.product._id))}
-                    className="p-1.5 hover:bg-rosegold/10 rounded-xl transition-colors"
-                    aria-label="Remove item"
-                  >
-                    <X className="w-3.5 h-3.5 text-rosegold/60" />
-                  </button>
-                </motion.div>
+                  item={c}
+                  onDecrease={() => updateQuantity(c.product._id, -1)}
+                  onIncrease={() => updateQuantity(c.product._id, 1)}
+                  onRemove={() => setCart((prev) => prev.filter((x) => x.product._id !== c.product._id))}
+                />
               ))}
             </AnimatePresence>
           )}
         </div>
 
-        <div className="border-t border-mist/40 p-5 space-y-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-charcoal/60">Subtotal</span>
-            <span className="font-medium">{formatPrice(subtotal)}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-charcoal/60">Tax (8%)</span>
-            <span className="font-medium">{formatPrice(tax)}</span>
-          </div>
-          <div className="flex items-center justify-between text-xl font-serif pt-3 border-t border-mist/40">
-            <span>Total</span>
-            <motion.span
-              key={total}
-              initial={{ scale: 1.05 }}
-              animate={{ scale: 1 }}
-              className="text-gold-dark"
-            >
-              {formatPrice(total)}
-            </motion.span>
-          </div>
-          <Button
-            variant="premium"
-            size="lg"
-            className="w-full"
-            disabled={cart.length === 0}
-            onClick={openCheckout}
-          >
-            Checkout
-          </Button>
-        </div>
+        <CartTotals
+          subtotal={subtotal}
+          tax={tax}
+          total={total}
+          disabled={cart.length === 0}
+          onCheckout={openCheckout}
+        />
       </div>
+
+      {/* Floating cart button — mobile only (<lg) */}
+      <button
+        type="button"
+        onClick={() => setShowMobileCart(true)}
+        disabled={cart.length === 0}
+        className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 pl-4 pr-2 py-2 bg-ebony text-white rounded-full shadow-2xl shadow-black/30 disabled:opacity-0 disabled:pointer-events-none transition-all hover:scale-105 active:scale-95"
+        aria-label="Open cart"
+      >
+        <div className="relative">
+          <ShoppingBag className="w-5 h-5 text-gold-light" />
+          <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 bg-gold text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            {cart.reduce((s, c) => s + c.quantity, 0)}
+          </span>
+        </div>
+        <div className="flex flex-col items-start leading-tight">
+          <span className="text-[10px] uppercase tracking-wider text-white/40">View cart</span>
+          <span className="text-sm font-serif text-gold-light">{formatPrice(total)}</span>
+        </div>
+        <div className="ml-2 w-9 h-9 rounded-full bg-gold flex items-center justify-center">
+          <ChevronUp className="w-4 h-4 text-white" />
+        </div>
+      </button>
+
+      {/* Mobile cart drawer */}
+      <AnimatePresence>
+        {showMobileCart && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowMobileCart(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 350 }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl flex flex-col"
+            >
+              <div className="flex items-center justify-center pt-2 pb-1">
+                <div className="w-12 h-1.5 bg-mist/60 rounded-full" />
+              </div>
+              <div className="px-5 py-3 border-b border-mist/40 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gold/5 rounded-lg">
+                    <ShoppingBag className="w-4 h-4 text-gold-dark" />
+                  </div>
+                  <span className="text-sm font-medium">Current Sale</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-charcoal/40 bg-mist/30 px-2.5 py-1 rounded-full">
+                    {cart.reduce((s, c) => s + c.quantity, 0)} items
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileCart(false)}
+                    className="p-2 hover:bg-mist/50 rounded-lg"
+                    aria-label="Close cart"
+                  >
+                    <X className="w-4 h-4 text-charcoal/40" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-[160px]">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                    <div className="w-14 h-14 bg-mist/30 rounded-2xl flex items-center justify-center mb-4">
+                      <ShoppingBag className="w-7 h-7 text-charcoal/20" />
+                    </div>
+                    <p className="text-xs text-charcoal/40">Cart is empty</p>
+                  </div>
+                ) : (
+                  <AnimatePresence>
+                    {cart.map((c) => (
+                      <CartRow
+                        key={c.product._id}
+                        item={c}
+                        onDecrease={() => updateQuantity(c.product._id, -1)}
+                        onIncrease={() => updateQuantity(c.product._id, 1)}
+                        onRemove={() => setCart((prev) => prev.filter((x) => x.product._id !== c.product._id))}
+                      />
+                    ))}
+                  </AnimatePresence>
+                )}
+              </div>
+
+              <CartTotals
+                subtotal={subtotal}
+                tax={tax}
+                total={total}
+                disabled={cart.length === 0}
+                onCheckout={() => { setShowMobileCart(false); openCheckout(); }}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Checkout Modal */}
       <Modal isOpen={showCheckoutModal} onClose={() => !processing && setShowCheckoutModal(false)} title="Complete Sale">

@@ -9,9 +9,9 @@ export default function POSPage() {
   const [productCount, setProductCount] = useState(0);
 
   useEffect(() => {
-    fetch("/api/products")
+    fetch("/api/products?all=true&limit=100")
       .then((r) => r.json())
-      .then((data) => setProductCount(data.products?.length ?? data?.length ?? 0))
+      .then((data) => setProductCount(data.total ?? data.products?.length ?? data?.length ?? 0))
       .catch(() => {});
   }, []);
 
