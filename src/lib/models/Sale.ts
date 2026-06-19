@@ -51,4 +51,7 @@ const saleSchema = new Schema<ISale>(
   { timestamps: true }
 );
 
+saleSchema.index({ createdAt: -1 });
+saleSchema.index({ salesPerson: 1, createdAt: -1 });
+
 export const Sale = models.Sale || model<ISale>("Sale", saleSchema);

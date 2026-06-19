@@ -55,9 +55,9 @@ export default function OrderTable({ orders, onRefresh }: OrderTableProps) {
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (orderNumber: string, newStatus: string) => {
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`/api/orders/${orderNumber}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -231,7 +231,7 @@ export default function OrderTable({ orders, onRefresh }: OrderTableProps) {
                 {statuses.map((status) => (
                   <button
                     key={status}
-                    onClick={() => handleStatusUpdate(selectedOrder._id, status)}
+                    onClick={() => handleStatusUpdate(selectedOrder.orderNumber, status)}
                     className={`px-4 py-2.5 text-xs font-medium rounded-xl border transition-all duration-200 ${
                       selectedOrder.status === status
                         ? "bg-charcoal text-white border-charcoal shadow-md"

@@ -300,6 +300,55 @@ export function parsePaystackInitializeBody(body: unknown): Result<{ items: Arra
   return ok({ items: items.map((item) => (item as { ok: true; value: unknown }).value) as Array<{ productId: string; quantity: number }> });
 }
 
+const salePaymentMethods = ["cash", "card", "transfer"] as const;
+
+export function parseSaleBody(body: unknown): Result<{
+  items: Array<{ productId: string; quantity: number }>;
+  paymentMethod: string;
+  customerName?: string;
+  customerEmail?: string;
+  notes?: string;
+}> {
+  const data = asRecord(body);
+
+  if (!Array.isArray(data.items) || data.items.length < 1 || data.items.length > 50) {
+    return fail("Sale must contain between 1 and 50 items");
+  }
+
+  const items = (data.items as unknown[]).map((item, index) => {
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      const fields = item as Record<string, unknown>;
+      if (fields.productId === undefined && fields.product !== undefined) {
+        return parseCartItem({ productId: fields.product, quantity: fields.quantity }, index);
+      }
+    }
+    return parseCartItem(item, index);
+  });
+  const firstFailedItem = items.find((item) => !item.ok);
+  if (firstFailedItem) return firstFailedItem;
+
+  const paymentMethod = requiredString(data.paymentMethod, "Payment method", 20);
+  if (!paymentMethod.ok) return paymentMethod;
+  if (!salePaymentMethods.includes(paymentMethod.value as (typeof salePaymentMethods)[number])) {
+    return fail("Invalid payment method");
+  }
+
+  const customerName = optionalString(data.customerName, "Customer name", 160);
+  if (!customerName.ok) return customerName;
+  const customerEmail = optionalString(data.customerEmail, "Customer email", 254);
+  if (!customerEmail.ok) return customerEmail;
+  const notes = optionalString(data.notes, "Notes", 1000);
+  if (!notes.ok) return notes;
+
+  return ok({
+    items: items.map((item) => (item as { ok: true; value: { productId: string; quantity: number } }).value),
+    paymentMethod: paymentMethod.value,
+    customerName: customerName.value,
+    customerEmail: customerEmail.value,
+    notes: notes.value,
+  });
+}
+
 export function parseOrderStatusBody(body: unknown): Result<{ status: string }> {
   const data = asRecord(body);
   const status = requiredString(data.status, "Status", 40);

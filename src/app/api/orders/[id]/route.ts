@@ -5,8 +5,9 @@ import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Order } from "@/lib/models/Order";
 import { AuditLog } from "@/lib/models/AuditLog";
-import { requireRole } from "@/lib/authz";
+import { requireRole, AuthError } from "@/lib/authz";
 import { parseOrderStatusBody } from "@/lib/validation";
+import { refundPaystackTransaction } from "@/lib/paystack";
 
 const allowedStatuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"] as const;
 const allowedTransitions: Record<string, string[]> = {
@@ -52,6 +53,83 @@ export async function GET(
   }
 }
 
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    if (!validateCSRF(req)) {
+      return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+    }
+
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`${ip}:orders-cancel`, 10, 60_000)) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await req.json().catch(() => ({}));
+    const action = body.action;
+
+    if (action !== "cancel") {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    await connectToDatabase();
+    const order = await Order.findOne({ orderNumber: id });
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    const isOwner = order.customer.email.toLowerCase() === session.user.email.toLowerCase();
+    const isAdmin = session.user.role === "admin";
+    const isStaff = session.user.role === "staff";
+
+    if (!isOwner && !isAdmin && !isStaff) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (!allowedTransitions[order.status]?.includes("cancelled")) {
+      return NextResponse.json({ error: "This order cannot be cancelled" }, { status: 400 });
+    }
+
+    const previousStatus = order.status;
+    order.status = "cancelled";
+    await order.save();
+
+    if (order.paymentStatus === "paid" && order.paymentReference && !order.paymentReference.startsWith("COD-")) {
+      try {
+        await refundPaystackTransaction(order.paymentReference, order.total);
+        order.paymentStatus = "refunded";
+        await order.save();
+      } catch {
+        console.error(`Refund failed for order ${order.orderNumber}`);
+      }
+    }
+
+    await AuditLog.create({
+      actor: session.user.id,
+      actorName: session.user.name || session.user.email || "User",
+      actorEmail: session.user.email || "",
+      action: "order.cancel",
+      targetType: "Order",
+      targetId: order.orderNumber,
+      metadata: { previousStatus, cancelledBy: isOwner ? "customer" : "staff" },
+    });
+
+    return NextResponse.json({ order });
+  } catch (error) {
+    console.error("POST /api/orders/[id] cancel error:", error);
+    return NextResponse.json({ error: "Failed to cancel order" }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -62,7 +140,7 @@ export async function PATCH(
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 20, 60_000)) {
+    if (!checkRateLimit(`${ip}:orders-patch`, 20, 60_000)) {
       return NextResponse.json({ error: "Too many order updates. Try again later." }, { status: 429 });
     }
 
@@ -110,6 +188,9 @@ export async function PATCH(
 
     return NextResponse.json({ order });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("PATCH /api/orders/[id] error:", error);
     return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
   }

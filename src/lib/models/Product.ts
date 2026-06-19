@@ -54,5 +54,9 @@ const productSchema = new Schema<IProduct>(
   { timestamps: true }
 );
 
+productSchema.index({ createdAt: -1 });
+productSchema.index({ isActive: 1, createdAt: -1 });
+productSchema.index({ isFeatured: 1, isActive: 1 });
+
 export const Product =
   models.Product || model<IProduct>("Product", productSchema);

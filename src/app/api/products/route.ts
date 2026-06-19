@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongoose";
 import { Product } from "@/lib/models/Product";
 import { slugify } from "@/lib/utils";
-import { requireRole } from "@/lib/authz";
+import { requireRole, AuthError } from "@/lib/authz";
 import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 import { errorFromUnknown, parseProductBody } from "@/lib/validation";
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 30, 60_000)) {
+    if (!checkRateLimit(`${ip}:products-create`, 30, 60_000)) {
       return NextResponse.json({ error: "Too many product requests. Try again later." }, { status: 429 });
     }
 
@@ -67,6 +67,9 @@ export async function POST(req: NextRequest) {
     const product = await Product.create({ ...parsed.value, slug });
     return NextResponse.json({ product }, { status: 201 });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("POST /api/products error:", errorFromUnknown(error));
     return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
   }

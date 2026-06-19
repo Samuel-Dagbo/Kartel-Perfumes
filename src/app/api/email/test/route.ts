@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
 import { testEmailTemplate } from "@/lib/email-templates";
-import { requireRole } from "@/lib/authz";
+import { requireRole, AuthError } from "@/lib/authz";
 
 export async function POST() {
   try {
@@ -20,6 +20,9 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Test email error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to send test email" },

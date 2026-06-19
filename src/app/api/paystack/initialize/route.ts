@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 10, 60_000)) {
+    if (!checkRateLimit(`${ip}:paystack-init`, 10, 60_000)) {
       return NextResponse.json({ error: "Too many payment requests. Try again later." }, { status: 429 });
     }
 
@@ -72,16 +72,23 @@ export async function POST(req: NextRequest) {
     const totals = calculateTotals(subtotal);
     const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || ""}/order/complete?ref={{reference}}`;
 
-    const payment = await initializePaystackTransaction({
-      email: session.user.email,
-      amount: totals.total,
-      callbackUrl,
-      metadata: {
-        cart: resolvedItems,
-        totals,
-        userId: session.user.id,
-      },
-    });
+    let payment;
+    try {
+      payment = await initializePaystackTransaction({
+        email: session.user.email,
+        amount: totals.total,
+        callbackUrl,
+        metadata: {
+          cart: resolvedItems,
+          totals,
+          userId: session.user.id,
+        },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Payment provider error";
+      const isConfigIssue = msg.includes("not configured") || msg.includes("Invalid key");
+      return NextResponse.json({ error: msg }, { status: isConfigIssue ? 503 : 500 });
+    }
 
     return NextResponse.json({
       authorizationUrl: payment.authorizationUrl,

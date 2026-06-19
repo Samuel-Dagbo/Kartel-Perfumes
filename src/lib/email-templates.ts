@@ -1,3 +1,12 @@
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function wrapLayout(content: string): string {
   return `<!DOCTYPE html>
 <html>
@@ -50,7 +59,7 @@ export function orderConfirmationTemplate(params: {
     .map(
       (item) => `
     <tr>
-      <td style="padding:12px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;">${item.name} x${item.quantity}</td>
+      <td style="padding:12px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;">${escapeHtml(item.name)} x${item.quantity}</td>
       <td style="padding:12px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;text-align:right;">GHS ${item.price.toFixed(2)}</td>
     </tr>`
     )
@@ -68,7 +77,7 @@ export function orderConfirmationTemplate(params: {
 
   const content = `
     <h2 style="margin:0 0 8px;font-size:22px;color:#1a1a2e;font-weight:400;">Thank you for your order</h2>
-    <p style="margin:0 0 24px;font-size:14px;color:#666;line-height:1.6;">Hi ${params.customerName}, we've received your order and will process it shortly.</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#666;line-height:1.6;">Hi ${escapeHtml(params.customerName)}, we've received your order and will process it shortly.</p>
 
     <div style="background-color:#f9f6f2;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
       <p style="margin:0;font-size:12px;color:#888;letter-spacing:1px;text-transform:uppercase;">Order Reference</p>

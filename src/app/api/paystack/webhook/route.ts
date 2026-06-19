@@ -33,6 +33,11 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase();
     const order = await Order.findOne({ paymentReference: reference });
+
+    if (order?.paymentStatus === "paid") {
+      return NextResponse.json({ received: true, alreadyProcessed: true });
+    }
+
     const verification = await verifyPaystackTransaction(reference);
 
     if (!verification.verified) {

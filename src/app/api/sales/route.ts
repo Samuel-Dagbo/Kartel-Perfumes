@@ -6,32 +6,33 @@ import { connectToDatabase } from "@/lib/mongoose";
 import { Sale } from "@/lib/models/Sale";
 import { Product } from "@/lib/models/Product";
 import { generateSaleNumber } from "@/lib/utils";
-import { requireRole } from "@/lib/authz";
+import { requireRole, AuthError } from "@/lib/authz";
 import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 import { decrementStock } from "@/lib/stock";
 import { TAX_RATE } from "@/lib/constants";
-import { errorFromUnknown, parseCartItem } from "@/lib/validation";
+import { errorFromUnknown, parseSaleBody } from "@/lib/validation";
 
-function requiredString(value: unknown, field: string, max: number): string | undefined {
-  if (value === undefined || value === null || value === "") return undefined;
-  if (typeof value !== "string") throw new Error(`${field} must be a string`);
-  const trimmed = value.trim();
-  if (trimmed.length > max) throw new Error(`${field} is too long`);
-  return trimmed;
-}
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(Number(searchParams.get("page") || 1), 1);
+    const limit = Math.min(Math.max(Number(searchParams.get("limit") || 20), 1), 100);
+
     await connectToDatabase();
-    const sales = await Sale.find()
-      .sort({ createdAt: -1 })
-      .populate("items.product", "name images stock")
-      .lean();
+    const [sales, total] = await Promise.all([
+      Sale.find()
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate("items.product", "name images stock")
+        .lean(),
+      Sale.countDocuments(),
+    ]);
 
     const enriched = sales.map((sale) => {
       const items = ((sale.items as Array<Record<string, unknown>>) || []).map((item) => {
@@ -48,7 +49,7 @@ export async function GET() {
       return { ...sale, items };
     });
 
-    return NextResponse.json({ sales: enriched });
+    return NextResponse.json({ sales: enriched, total, page, limit });
   } catch (error) {
     console.error("GET /api/sales error:", error);
     return NextResponse.json({ error: "Failed to fetch sales" }, { status: 500 });
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 20, 60_000)) {
+    if (!checkRateLimit(`${ip}:sales-create`, 20, 60_000)) {
       return NextResponse.json({ error: "Too many sale requests. Try again later." }, { status: 429 });
     }
 
@@ -70,30 +71,12 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
 
     const body = await req.json();
-    const rawItems: unknown[] = Array.isArray(body.items) ? body.items : [];
-    if (rawItems.length < 1 || rawItems.length > 50) {
-      return NextResponse.json({ error: "Sale must contain 1 to 50 items" }, { status: 400 });
+    const parsed = parseSaleBody(body);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    const parsedItems = rawItems.map((item, index) => {
-      const fields = item && typeof item === "object" ? item as Record<string, unknown> : {};
-      return parseCartItem({ productId: fields.product, quantity: fields.quantity }, index);
-    });
-    const invalidItem = parsedItems.find((item) => !item.ok);
-    if (invalidItem) {
-      return NextResponse.json({ error: invalidItem.error }, { status: 400 });
-    }
-
-    const paymentMethod = requiredString(body.paymentMethod, "Payment method", 20);
-    if (!paymentMethod || !["cash", "card", "transfer"].includes(paymentMethod)) {
-      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
-    }
-
-    const customerName = requiredString(body.customerName, "Customer name", 160);
-    const customerEmail = requiredString(body.customerEmail, "Customer email", 254);
-    const notes = requiredString(body.notes, "Notes", 1000);
-
-    const cartItems = parsedItems.map((item) => (item as { ok: true; value: { productId: string; quantity: number } }).value);
+    const { items: cartItems, paymentMethod, customerName, customerEmail, notes } = parsed.value;
     const products = await Product.find({ _id: { $in: cartItems.map((item) => item.productId) } }).lean();
     const productMap = new Map(products.map((product) => [product._id.toString(), product]));
     const resolvedItems = [];
@@ -165,6 +148,9 @@ export async function POST(req: NextRequest) {
       dbSession.endSession();
     }
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("POST /api/sales error:", errorFromUnknown(error));
     return NextResponse.json({ error: "Failed to create sale" }, { status: 500 });
   }

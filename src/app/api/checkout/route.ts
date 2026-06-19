@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 6, 60_000)) {
+    if (!checkRateLimit(`${ip}:checkout`, 6, 60_000)) {
       return NextResponse.json({ error: "Too many checkout requests. Try again later." }, { status: 429 });
     }
 

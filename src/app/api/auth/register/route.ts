@@ -11,12 +11,17 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 8, 60_000)) {
+    if (!checkRateLimit(`${ip}:register`, 8, 60_000)) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
 
     await connectToDatabase();
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+    }
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const email = typeof body.email === "string" ? body.email.toLowerCase().trim() : "";
     const password = typeof body.password === "string" ? body.password : "";

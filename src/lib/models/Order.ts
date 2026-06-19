@@ -86,4 +86,8 @@ const orderSchema = new Schema<IOrder>(
   { timestamps: true }
 );
 
+orderSchema.index({ paymentReference: 1 });
+orderSchema.index({ "customer.email": 1, createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });
+
 export const Order = models.Order || model<IOrder>("Order", orderSchema);

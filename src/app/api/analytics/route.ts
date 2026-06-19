@@ -22,166 +22,218 @@ export async function GET() {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    const [
-      rawSales,
-      rawOrders,
-      rawProducts,
-      rawUsers,
-      recentSales,
-      recentOrders,
-    ] = await Promise.all([
-      Sale.find().sort({ createdAt: -1 }).lean(),
-      Order.find().sort({ createdAt: -1 }).lean(),
-      Product.find().lean(),
-      User.find().lean(),
-      Sale.find({ createdAt: { $gte: thirtyDaysAgo } }).sort({ createdAt: -1 }).lean(),
-      Order.find({ createdAt: { $gte: thirtyDaysAgo } }).sort({ createdAt: -1 }).lean(),
-    ]);
-
-    const sales = rawSales as unknown as Array<{
-      _id: string;
-      saleNumber: string;
-      total: number;
-      subtotal: number;
-      tax: number;
-      paymentMethod: string;
-      createdAt: Date;
-      items: Array<{ name: string; quantity: number; price: number }>;
-    }>;
-
-    const orders = rawOrders as unknown as Array<{
-      _id: string;
-      orderNumber: string;
-      total: number;
-      status: string;
-      paymentStatus: string;
-      paymentMethod: string;
-      createdAt: Date;
-      items: Array<{ name: string; quantity: number; price: number }>;
-    }>;
-
-    const allTransactions = [
-      ...sales.map((s) => ({ ...s, type: "sale" as const })),
-      ...orders.map((o) => ({ ...o, type: "order" as const })),
-    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    const paidTransactions = allTransactions.filter((t) => {
-      if (t.type === "sale") return true;
-      return t.paymentStatus === "paid" && t.status !== "cancelled";
-    });
-
-    const totalRevenue = paidTransactions.reduce((sum, t) => sum + t.total, 0);
-    const totalTransactions = allTransactions.length;
-
-    const recentTransactions = allTransactions.slice(0, 10);
-    const topTransactions = paidTransactions.slice(0, 5);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
-    const todayTransactions = paidTransactions.filter((t) => new Date(t.createdAt) >= todayStart);
-    const lowStockCount = rawProducts.filter((p: { stock: number }) => p.stock > 0 && p.stock <= 5).length;
 
-    const paymentMethods: Record<string, number> = {};
-    paidTransactions.forEach((t) => {
-      const method = t.paymentMethod || "unknown";
-      paymentMethods[method] = (paymentMethods[method] || 0) + t.total;
-    });
+    const [
+      totalProducts,
+      totalUsers,
+      activeUsers,
+      lowStockCount,
+      paidSalesAgg,
+      paidOrdersAgg,
+      todaySalesAgg,
+      todayOrdersAgg,
+      orderStatusesAgg,
+      salePaymentMethods,
+      orderPaymentMethods,
+      dailySalesRevenue,
+      dailyOrderRevenue,
+      topSaleProducts,
+      topOrderProducts,
+      recentSales,
+      recentOrders,
+      lastWeekSales,
+      lastWeekOrders,
+      prevWeekSales,
+      prevWeekOrders,
+    ] = await Promise.all([
+      Product.countDocuments(),
+      User.countDocuments(),
+      User.countDocuments({ isActive: true }),
+      Product.countDocuments({ stock: { $gt: 0 }, isActive: true, $expr: { $lte: ["$stock", 5] } }),
+
+      Sale.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: null, totalRevenue: { $sum: "$total" }, count: { $sum: 1 } } },
+      ]),
+
+      Order.aggregate([
+        { $match: { paymentStatus: "paid", status: { $ne: "cancelled" }, createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: null, totalRevenue: { $sum: "$total" }, count: { $sum: 1 } } },
+      ]),
+
+      Sale.aggregate([
+        { $match: { createdAt: { $gte: todayStart } } },
+        { $group: { _id: null, totalRevenue: { $sum: "$total" }, count: { $sum: 1 } } },
+      ]),
+
+      Order.aggregate([
+        { $match: { paymentStatus: "paid", status: { $ne: "cancelled" }, createdAt: { $gte: todayStart } } },
+        { $group: { _id: null, totalRevenue: { $sum: "$total" }, count: { $sum: 1 } } },
+      ]),
+
+      Order.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+
+      Sale.aggregate([
+        { $group: { _id: "$paymentMethod", total: { $sum: "$total" } } },
+      ]),
+
+      Order.aggregate([
+        { $match: { paymentStatus: "paid", status: { $ne: "cancelled" } } },
+        { $group: { _id: "$paymentMethod", total: { $sum: "$total" } } },
+      ]),
+
+      Sale.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, revenue: { $sum: "$total" }, count: { $sum: 1 } } },
+      ]),
+
+      Order.aggregate([
+        { $match: { paymentStatus: "paid", status: { $ne: "cancelled" }, createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, revenue: { $sum: "$total" }, count: { $sum: 1 } } },
+      ]),
+
+      Sale.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        { $unwind: "$items" },
+        { $group: { _id: "$items.name", quantity: { $sum: "$items.quantity" }, revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } } } },
+        { $sort: { revenue: -1 } },
+        { $limit: 10 },
+      ]),
+
+      Order.aggregate([
+        { $match: { paymentStatus: "paid", status: { $ne: "cancelled" }, createdAt: { $gte: thirtyDaysAgo } } },
+        { $unwind: "$items" },
+        { $group: { _id: "$items.name", quantity: { $sum: "$items.quantity" }, revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } } } },
+        { $sort: { revenue: -1 } },
+        { $limit: 10 },
+      ]),
+
+      Sale.find().sort({ createdAt: -1 }).limit(10).lean(),
+      Order.find().sort({ createdAt: -1 }).limit(10).lean(),
+
+      Sale.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
+        { $group: { _id: null, total: { $sum: "$total" } } },
+      ]),
+
+      Order.aggregate([
+        { $match: { paymentStatus: "paid", status: { $ne: "cancelled" }, createdAt: { $gte: sevenDaysAgo } } },
+        { $group: { _id: null, total: { $sum: "$total" } } },
+      ]),
+
+      Sale.aggregate([
+        { $match: { $and: [{ createdAt: { $gte: fourteenDaysAgo } }, { createdAt: { $lt: sevenDaysAgo } }] } },
+        { $group: { _id: null, total: { $sum: "$total" } } },
+      ]),
+
+      Order.aggregate([
+        { $match: { paymentStatus: "paid", status: { $ne: "cancelled" }, $and: [{ createdAt: { $gte: fourteenDaysAgo } }, { createdAt: { $lt: sevenDaysAgo } }] } },
+        { $group: { _id: null, total: { $sum: "$total" } } },
+      ]),
+    ]);
+
+    const totalSaleRevenue = paidSalesAgg[0]?.totalRevenue || 0;
+    const totalOrderRevenue = paidOrdersAgg[0]?.totalRevenue || 0;
+    const totalRevenue = totalSaleRevenue + totalOrderRevenue;
+    const totalTransactions = (paidSalesAgg[0]?.count || 0) + (paidOrdersAgg[0]?.count || 0);
+
+    const todaySaleRevenue = todaySalesAgg[0]?.totalRevenue || 0;
+    const todayOrderRevenue = todayOrdersAgg[0]?.totalRevenue || 0;
 
     const orderStatuses: Record<string, number> = {};
-    orders.forEach((o) => {
-      orderStatuses[o.status] = (orderStatuses[o.status] || 0) + 1;
+    orderStatusesAgg.forEach((o: { _id: string; count: number }) => {
+      orderStatuses[o._id] = o.count;
     });
 
-    const dailyRevenue: Record<string, number> = {};
-    const last30Days: Array<{ date: string; revenue: number; transactions: number }> = [];
+    const paymentMethods: Record<string, number> = {};
+    salePaymentMethods.forEach((s: { _id: string; total: number }) => {
+      paymentMethods[s._id] = (paymentMethods[s._id] || 0) + s.total;
+    });
+    orderPaymentMethods.forEach((o: { _id: string; total: number }) => {
+      paymentMethods[o._id] = (paymentMethods[o._id] || 0) + o.total;
+    });
+
+    const dailyRevenueMap: Record<string, { revenue: number; count: number }> = {};
     for (let i = 29; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const key = d.toISOString().split("T")[0];
-      dailyRevenue[key] = 0;
+      dailyRevenueMap[key] = { revenue: 0, count: 0 };
     }
-    recentSales.forEach((s: { total: number; createdAt: Date }) => {
-      const key = new Date(s.createdAt).toISOString().split("T")[0];
-      if (dailyRevenue[key] !== undefined) dailyRevenue[key] += s.total;
+    [...dailySalesRevenue, ...dailyOrderRevenue].forEach((entry: { _id: string; revenue: number; count: number }) => {
+      if (dailyRevenueMap[entry._id]) {
+        dailyRevenueMap[entry._id].revenue += entry.revenue;
+        dailyRevenueMap[entry._id].count += entry.count;
+      }
     });
-    recentOrders.forEach((o: { total: number; createdAt: Date; paymentStatus: string; status: string }) => {
-      if (o.paymentStatus !== "paid" || o.status === "cancelled") return;
-      const key = new Date(o.createdAt).toISOString().split("T")[0];
-      if (dailyRevenue[key] !== undefined) dailyRevenue[key] += o.total;
-    });
-    Object.entries(dailyRevenue).forEach(([date, revenue]) => {
-      const dayTransactions = paidTransactions.filter(
-        (t) => new Date(t.createdAt).toISOString().split("T")[0] === date
-      );
-      last30Days.push({
-        date,
-        revenue: Math.round(revenue * 100) / 100,
-        transactions: dayTransactions.length,
-      });
-    });
+    const last30Days = Object.entries(dailyRevenueMap).map(([date, data]) => ({
+      date,
+      revenue: Math.round(data.revenue * 100) / 100,
+      transactions: data.count,
+    }));
 
-    const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {};
-    paidTransactions.forEach((t) => {
-      (t.items || []).forEach((item: { name: string; quantity: number; price: number }) => {
-        if (!productSales[item.name]) {
-          productSales[item.name] = { name: item.name, quantity: 0, revenue: 0 };
-        }
-        productSales[item.name].quantity += item.quantity;
-        productSales[item.name].revenue += item.price * item.quantity;
-      });
+    const productSalesMap: Record<string, { name: string; quantity: number; revenue: number }> = {};
+    [...topSaleProducts, ...topOrderProducts].forEach((item: { _id: string; quantity: number; revenue: number }) => {
+      if (productSalesMap[item._id]) {
+        productSalesMap[item._id].quantity += item.quantity;
+        productSalesMap[item._id].revenue += item.revenue;
+      } else {
+        productSalesMap[item._id] = { name: item._id, quantity: item.quantity, revenue: item.revenue };
+      }
     });
-    const topProducts = Object.values(productSales)
+    const topProducts = Object.values(productSalesMap)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
 
-    const weekAgoRevenue = paidTransactions
-      .filter((t) => new Date(t.createdAt) >= sevenDaysAgo)
-      .reduce((sum, t) => sum + t.total, 0);
-    const twoWeeksAgoRevenue = paidTransactions
-      .filter(
-        (t) =>
-          new Date(t.createdAt) >= new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) &&
-          new Date(t.createdAt) < sevenDaysAgo
-      )
-      .reduce((sum, t) => sum + t.total, 0);
-    const revenueTrend =
-      twoWeeksAgoRevenue > 0
-        ? Math.round(((weekAgoRevenue - twoWeeksAgoRevenue) / twoWeeksAgoRevenue) * 100)
-        : 0;
+    const lastWeekTotal = (lastWeekSales[0]?.total || 0) + (lastWeekOrders[0]?.total || 0);
+    const prevWeekTotal = (prevWeekSales[0]?.total || 0) + (prevWeekOrders[0]?.total || 0);
+    const revenueTrend = prevWeekTotal > 0
+      ? Math.round(((lastWeekTotal - prevWeekTotal) / prevWeekTotal) * 100)
+      : 0;
+
+    const allRecent = [
+      ...recentSales.map((s) => ({
+        _id: s._id,
+        title: s.saleNumber,
+        type: "sale" as const,
+        total: s.total,
+        itemCount: (s.items || []).reduce((sum: number, i: { quantity: number }) => sum + i.quantity, 0),
+        paymentMethod: s.paymentMethod,
+        createdAt: s.createdAt,
+      })),
+      ...recentOrders.map((o) => ({
+        _id: o._id,
+        title: o.orderNumber,
+        type: "order" as const,
+        total: o.total,
+        itemCount: (o.items || []).reduce((sum: number, i: { quantity: number }) => sum + i.quantity, 0),
+        paymentMethod: o.paymentMethod,
+        createdAt: o.createdAt,
+      })),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return NextResponse.json({
       totalRevenue: Math.round(totalRevenue * 100) / 100,
       totalTransactions,
-      totalOrders: orders.length,
-      totalSales: sales.length,
-      todayRevenue: Math.round(todayTransactions.reduce((sum, t) => sum + t.total, 0) * 100) / 100,
-      todayTransactions: todayTransactions.length,
+      totalOrders: orderStatusesAgg.reduce((sum: number, o: { count: number }) => sum + o.count, 0),
+      totalSales: paidSalesAgg[0]?.count || 0,
+      todayRevenue: Math.round((todaySaleRevenue + todayOrderRevenue) * 100) / 100,
+      todayTransactions: (todaySalesAgg[0]?.count || 0) + (todayOrdersAgg[0]?.count || 0),
       lowStockCount,
-      totalProducts: rawProducts.length,
-      totalUsers: rawUsers.length,
-      activeUsers: rawUsers.filter((u: { isActive: boolean }) => u.isActive).length,
+      totalProducts,
+      totalUsers,
+      activeUsers,
       revenueTrend,
       paymentMethods,
       orderStatuses,
       last30Days,
       topProducts,
-      topTransactions: topTransactions.map((t) => ({
-        _id: t._id,
-        type: t.type,
-        title: t.type === "sale" ? t.saleNumber : t.orderNumber,
-        total: t.total,
-        itemCount: (t.items || []).reduce((sum: number, i: { quantity: number }) => sum + i.quantity, 0),
-        paymentMethod: t.paymentMethod,
-        createdAt: t.createdAt,
-      })),
-      recentTransactions: recentTransactions.map((t) => ({
-        _id: t._id,
-        title: t.type === "sale" ? t.saleNumber : t.orderNumber,
-        type: t.type,
-        total: t.total,
-        itemCount: (t.items || []).reduce((sum: number, i: { quantity: number }) => sum + i.quantity, 0),
-        paymentMethod: t.paymentMethod,
-        createdAt: t.createdAt,
-      })),
+      topTransactions: allRecent.slice(0, 5),
+      recentTransactions: allRecent.slice(0, 10),
     });
   } catch (error) {
     console.error("GET /api/analytics error:", error);

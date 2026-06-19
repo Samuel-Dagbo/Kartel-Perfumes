@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
-import { requireRole } from "@/lib/authz";
+import { requireRole, AuthError } from "@/lib/authz";
 
 const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const maxSize = 5 * 1024 * 1024;
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 15, 60_000)) {
+    if (!checkRateLimit(`${ip}:upload`, 15, 60_000)) {
       return NextResponse.json({ error: "Too many upload requests. Try again later." }, { status: 429 });
     }
 
@@ -172,6 +172,9 @@ export async function POST(req: NextRequest) {
       publicId: result.public_id,
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Upload error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }

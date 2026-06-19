@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
-        pathname: "/kartel-perfume/**",
+        pathname: "/dvlmnjeru/**",
       },
     ],
     dangerouslyAllowSVG: false,

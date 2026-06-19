@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/mongoose";
 import { Sale } from "@/lib/models/Sale";
 import { Product } from "@/lib/models/Product";
 import { AuditLog } from "@/lib/models/AuditLog";
-import { requireRole } from "@/lib/authz";
+import { requireRole, AuthError } from "@/lib/authz";
 import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 
 export async function DELETE(
@@ -17,7 +17,7 @@ export async function DELETE(
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 10, 60_000)) {
+    if (!checkRateLimit(`${ip}:sales-delete`, 10, 60_000)) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
 
@@ -92,6 +92,9 @@ export async function DELETE(
       dbSession.endSession();
     }
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("DELETE /api/sales/[id] error:", error);
     return NextResponse.json({ error: "Failed to delete sale" }, { status: 500 });
   }

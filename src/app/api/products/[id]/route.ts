@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/mongoose";
 import { Product } from "@/lib/models/Product";
 import { AuditLog } from "@/lib/models/AuditLog";
 import { slugify } from "@/lib/utils";
-import { requireRole } from "@/lib/authz";
+import { requireRole, AuthError } from "@/lib/authz";
 import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
 import { errorFromUnknown, parseProductBody } from "@/lib/validation";
 
@@ -61,7 +61,7 @@ export async function PATCH(
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 30, 60_000)) {
+    if (!checkRateLimit(`${ip}:products-update`, 30, 60_000)) {
       return NextResponse.json({ error: "Too many product requests. Try again later." }, { status: 429 });
     }
 
@@ -93,10 +93,13 @@ export async function PATCH(
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
-    const product = await Product.findByIdAndUpdate(id, updates, { new: true }).lean();
+    const product = await Product.findByIdAndUpdate(id, updates, { returnDocument: "after" }).lean();
 
     return NextResponse.json({ product });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("PATCH /api/products/[id] error:", errorFromUnknown(error));
     return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
   }
@@ -112,7 +115,7 @@ export async function DELETE(
     }
 
     const ip = getClientIp(req);
-    if (!checkRateLimit(ip, 30, 60_000)) {
+    if (!checkRateLimit(`${ip}:products-delete`, 30, 60_000)) {
       return NextResponse.json({ error: "Too many product requests. Try again later." }, { status: 429 });
     }
 
@@ -142,6 +145,9 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Product deleted" });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("DELETE /api/products/[id] error:", errorFromUnknown(error));
     return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
   }
