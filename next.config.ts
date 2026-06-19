@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     ],
     dangerouslyAllowSVG: false,
   },
-  serverExternalPackages: ["mongoose"],
+  serverExternalPackages: ["mongoose", "bcryptjs"],
   async headers() {
     return [
       {

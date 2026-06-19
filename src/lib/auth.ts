@@ -22,6 +22,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.error("Auth: Missing email or password");
           throw new Error("Email and password required");
         }
 
@@ -29,6 +30,7 @@ export const authOptions: NextAuthOptions = {
         const password = String(credentials.password);
 
         if (password.length > 128) {
+          console.error("Auth: Password too long");
           throw new Error("Invalid credentials");
         }
 
@@ -36,10 +38,12 @@ export const authOptions: NextAuthOptions = {
 
         const user = await User.findOne({ email });
         if (!user) {
+          console.error("Auth: User not found for", email);
           throw new Error("Invalid credentials");
         }
 
         if (!user.isActive) {
+          console.error("Auth: User deactivated", email);
           throw new Error("Account has been deactivated");
         }
 
@@ -48,9 +52,11 @@ export const authOptions: NextAuthOptions = {
           user.passwordHash
         );
         if (!isValid) {
+          console.error("Auth: Wrong password for", email);
           throw new Error("Invalid credentials");
         }
 
+        console.log("Auth: Login success for", email);
         return {
           id: user._id.toString(),
           email: user.email,
