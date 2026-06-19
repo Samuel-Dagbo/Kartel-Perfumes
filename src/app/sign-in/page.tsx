@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -37,10 +37,6 @@ function SignInForm() {
       return () => clearTimeout(timer);
     }
   }, [errorParam]);
-
-  useEffect(() => {
-    signOut({ redirect: false }).catch(() => undefined);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
