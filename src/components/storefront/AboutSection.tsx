@@ -109,31 +109,48 @@ export default function AboutSection({ productImages = [] }: { productImages?: s
           >
             <div className="flex items-center gap-3 mb-6">
               <span className="w-8 h-px bg-gold/40" />
-              <span className="text-gold tracking-[0.25em] text-xs uppercase font-medium">Our Craft</span>
+              <span className="text-gold tracking-[0.25em] text-xs uppercase font-medium">Our Story</span>
             </div>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif text-charcoal mb-8 leading-tight">
-              The Art of
+              Luxury Within
               <br />
-              <span className="text-gold">Perfumery</span>
+              <span className="text-gold">Reach.</span>
             </h2>
             <div className="w-12 h-px bg-gold/30 mb-8" />
             <div className="space-y-5 text-charcoal/50 text-sm md:text-base leading-relaxed">
               <p>
-                At Kartel, we believe fragrance is the most intimate form of
-                expression. Each perfume in our collection is a collaboration with
-                master perfumers who share our obsession with quality and
-                authenticity.
+                Kartel Perfumes was founded on a simple belief: everyone deserves
+                to experience premium-quality fragrances without paying luxury
+                prices. From the very beginning, our mission has been to create
+                exceptional perfumes that combine outstanding quality,
+                long-lasting performance, and affordability.
               </p>
               <p>
-                We source the rarest ingredients from around the globe — hand-harvested
-                jasmine from Grasse, ancient sandalwood from Mysore, and wild-grown
-                vetiver from Haiti. Every batch is small, ensuring unparalleled
-                attention to detail.
+                Every fragrance is carefully crafted to deliver rich, memorable
+                scents that inspire confidence and leave a lasting impression. We
+                pay close attention to every detail — from the ingredients we use
+                to the presentation of each bottle — ensuring that every product
+                reflects the high standards our customers expect.
               </p>
               <p>
-                Our fragrances are never tested on animals. We craft using only
-                ethically sourced, sustainably harvested materials, and our flacons
-                are designed to be refilled and cherished for a lifetime.
+                Our commitment to quality and value has earned the trust of
+                fragrance lovers who want premium experiences at accessible
+                prices. We believe that luxury should be enjoyed every day, not
+                reserved for special occasions. Among our collection, the 30ml
+                Travel Size has become the heart of the Kartel Perfumes brand and
+                our most popular product by far. Compact, stylish, and easy to
+                carry, it offers the perfect balance of convenience,
+                affordability, and long-lasting fragrance, making it a favorite
+                choice for customers everywhere.
+              </p>
+              <p>
+                Today, Kartel Perfumes continues to grow with one clear purpose:
+                to provide high-quality, affordable fragrances that help people
+                express their individuality with confidence and style.
+              </p>
+              <p className="font-medium text-charcoal/70">
+                Kartel Perfumes — Premium Quality. Fairly Priced. Lasting
+                Impressions.
               </p>
             </div>
           </motion.div>

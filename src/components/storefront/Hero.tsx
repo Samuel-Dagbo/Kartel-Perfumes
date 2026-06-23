@@ -39,8 +39,8 @@ const letterVariants = {
   }),
 };
 
-const titleText = "The Essence";
-const subtitleText = "of Luxury";
+const titleText = "WEAR YOUR";
+const subtitleText = "LEGACY";
 
 export default function Hero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -171,8 +171,8 @@ export default function Hero() {
               animate="visible"
               className="text-white/45 text-sm sm:text-base md:text-lg max-w-lg mb-12 font-light leading-relaxed tracking-wide"
             >
-              Discover our curated collection of exceptional fragrances,
-              crafted in limited batches for the discerning few.
+              Premium fragrances crafted for those who dare to lead,
+              inspire, and leave unforgettable impressions
             </motion.p>
 
             <motion.div
