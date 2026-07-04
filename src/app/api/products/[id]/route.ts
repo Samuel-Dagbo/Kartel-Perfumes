@@ -6,7 +6,7 @@ import { AuditLog } from "@/lib/models/AuditLog";
 import { slugify } from "@/lib/utils";
 import { requireRole, AuthError } from "@/lib/authz";
 import { checkRateLimit, getClientIp, validateCSRF } from "@/lib/request";
-import { errorFromUnknown, parseProductBody } from "@/lib/validation";
+import { errorFromUnknown, parseProductBody, buildProductUpdate } from "@/lib/validation";
 
 export async function GET(
   _req: NextRequest,
@@ -89,11 +89,17 @@ export async function PATCH(
       updates.slug = await uniqueSlug(updates.name, id);
     }
 
-    if (Object.keys(updates).length === 0) {
+    const { set, unset } = buildProductUpdate(updates);
+
+    if (!("name" in updates) && Object.keys(set).length === 0 && !unset) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
-    const product = await Product.findByIdAndUpdate(id, updates, { returnDocument: "after" }).lean();
+    const updateQuery: Record<string, unknown> = {};
+    if (Object.keys(set).length > 0) updateQuery.$set = set;
+    if (unset && Object.keys(unset).length > 0) updateQuery.$unset = unset;
+
+    const product = await Product.findByIdAndUpdate(id, updateQuery, { returnDocument: "after" }).lean();
 
     return NextResponse.json({ product });
   } catch (error) {

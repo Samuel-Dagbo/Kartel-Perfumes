@@ -14,11 +14,16 @@ interface Product {
   _id: string;
   name: string;
   slug: string;
+  description?: string;
   price: number;
+  originalPrice?: number;
   stock: number;
   concentration: string;
   volume: number;
   gender: string;
+  brand?: string;
+  category?: string;
+  isFeatured?: boolean;
   isActive: boolean;
   images?: string[];
 }
@@ -31,6 +36,20 @@ interface InventoryTableProps {
 export default function InventoryTable({ products, onRefresh }: InventoryTableProps) {
   const [search, setSearch] = useState("");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    price: "",
+    originalPrice: "",
+    stock: "",
+    concentration: "",
+    volume: "",
+    gender: "unisex",
+    brand: "",
+    category: "",
+    isFeatured: false,
+    isActive: true,
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -111,16 +130,50 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
     }
   };
 
+  const openEdit = (product: Product) => {
+    setEditingProduct(product);
+    setEditImageUrl("");
+    setEditImagePreview(null);
+    setEditForm({
+      name: product.name ?? "",
+      description: product.description ?? "",
+      price: product.price != null ? String(product.price) : "",
+      originalPrice: product.originalPrice != null && product.originalPrice !== undefined ? String(product.originalPrice) : "",
+      stock: product.stock != null ? String(product.stock) : "",
+      concentration: product.concentration ?? "",
+      volume: product.volume != null ? String(product.volume) : "",
+      gender: product.gender ?? "unisex",
+      brand: product.brand ?? "",
+      category: product.category ?? "",
+      isFeatured: !!product.isFeatured,
+      isActive: product.isActive,
+    });
+  };
+
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
-    const trimmedName = (editingProduct.name || "").trim();
+    const trimmedName = editForm.name.trim();
     if (!trimmedName) {
       toast.error("Product name is required");
       return;
     }
-    const parsedPrice = Number(editingProduct.price) || 0;
-    const parsedStock = Number(editingProduct.stock) || 0;
+    if (!editForm.concentration.trim()) {
+      toast.error("Concentration is required");
+      return;
+    }
+    if (!editForm.brand.trim()) {
+      toast.error("Brand is required");
+      return;
+    }
+    if (!editForm.category.trim()) {
+      toast.error("Category is required");
+      return;
+    }
+    const parsedPrice = parseFloat(editForm.price);
+    const parsedStock = parseInt(editForm.stock, 10);
+    const parsedVolume = parseInt(editForm.volume, 10);
+    const parsedOriginalPrice = editForm.originalPrice.trim() === "" ? null : parseFloat(editForm.originalPrice);
     if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
       toast.error("Please enter a valid price");
       return;
@@ -129,12 +182,36 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
       toast.error("Please enter a valid stock quantity");
       return;
     }
+    if (Number.isNaN(parsedVolume) || parsedVolume < 1) {
+      toast.error("Please enter a valid volume (ml)");
+      return;
+    }
+    if (parsedOriginalPrice !== null && (Number.isNaN(parsedOriginalPrice) || parsedOriginalPrice < 0)) {
+      toast.error("Please enter a valid original price");
+      return;
+    }
     try {
       const body: Record<string, unknown> = {
         name: trimmedName,
         stock: parsedStock,
         price: parsedPrice,
+        volume: parsedVolume,
+        concentration: editForm.concentration.trim(),
+        gender: editForm.gender,
+        isFeatured: editForm.isFeatured,
+        isActive: editForm.isActive,
       };
+      const desc = editForm.description.trim();
+      if (desc) body.description = desc;
+      const brand = editForm.brand.trim();
+      if (brand) body.brand = brand;
+      const category = editForm.category.trim();
+      if (category) body.category = category;
+      if (parsedOriginalPrice !== null) {
+        body.originalPrice = parsedOriginalPrice;
+      } else {
+        body.originalPrice = null;
+      }
       if (editImageUrl) {
         body.images = [editImageUrl];
       }
@@ -279,7 +356,7 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
                     </td>
                     <td className="py-4 px-5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditingProduct(product); setEditImageUrl(""); setEditImagePreview(null); }}
+                        <button onClick={() => openEdit(product)}
                           className="p-2 hover:bg-mist/50 rounded-xl transition-colors duration-200" aria-label="Edit product">
                           <Edit2 className="w-4 h-4 text-charcoal/40 hover:text-gold-dark transition-colors" />
                         </button>
@@ -324,11 +401,23 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
       </Modal>
 
       {/* Edit Product Modal */}
-      <Modal isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} title="Edit Product">
+      <Modal isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} title="Edit Product" size="lg">
         <form onSubmit={handleEdit} className="space-y-5">
-          <Input label="Product Name" value={editingProduct?.name || ""}
-            onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, name: e.target.value } : null)}
+          <Input label="Product Name" value={editForm.name}
+            onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
             required maxLength={120} />
+
+          <div>
+            <label className="block text-xs font-medium tracking-[0.15em] uppercase text-charcoal/60 mb-2">Description</label>
+            <textarea
+              value={editForm.description}
+              onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+              maxLength={5000}
+              rows={3}
+              className="w-full px-4 py-3.5 bg-white border border-mist rounded-xl text-sm text-charcoal placeholder:text-charcoal/25 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/10 transition-all resize-y"
+              placeholder="Product description"
+            />
+          </div>
 
           {/* Image upload */}
           <div>
@@ -352,11 +441,56 @@ export default function InventoryTable({ products, onRefresh }: InventoryTablePr
             </button>
           </div>
 
-<Input label="Price" type="number" step="0.01" value={editingProduct?.price ?? ""}
-             onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, price: parseFloat(e.target.value) || editingProduct.price } : null)} />
-           <Input label="Stock" type="number" value={editingProduct?.stock ?? ""}
-             onChange={(e) => setEditingProduct(editingProduct ? { ...editingProduct, stock: parseInt(e.target.value) || editingProduct.stock } : null)} />
-           <div className="flex gap-3 pt-2">
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Price" type="number" step="0.01" min="0" value={editForm.price}
+              onChange={(e) => setEditForm((f) => ({ ...f, price: e.target.value }))} required />
+            <Input label="Original Price (optional)" type="number" step="0.01" min="0" value={editForm.originalPrice}
+              onChange={(e) => setEditForm((f) => ({ ...f, originalPrice: e.target.value }))}
+              helper="Set to empty to clear sale price" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Stock" type="number" min="0" value={editForm.stock}
+              onChange={(e) => setEditForm((f) => ({ ...f, stock: e.target.value }))} required />
+            <Input label="Volume (ml)" type="number" min="1" step="1" value={editForm.volume}
+              onChange={(e) => setEditForm((f) => ({ ...f, volume: e.target.value }))} required />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Concentration" value={editForm.concentration}
+              onChange={(e) => setEditForm((f) => ({ ...f, concentration: e.target.value }))} required maxLength={80} />
+            <Input label="Brand" value={editForm.brand}
+              onChange={(e) => setEditForm((f) => ({ ...f, brand: e.target.value }))} required maxLength={120} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Category" value={editForm.category}
+              onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))} required maxLength={120} />
+            <div>
+              <label className="block text-xs font-medium tracking-[0.15em] uppercase text-charcoal/60 mb-2">Gender</label>
+              <select value={editForm.gender} onChange={(e) => setEditForm((f) => ({ ...f, gender: e.target.value }))}
+                className="w-full px-4 py-3.5 bg-white border border-mist rounded-xl text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/10 transition-all">
+                <option value="unisex">Unisex</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Toggles */}
+          <div className="grid grid-cols-2 gap-4 pt-1">
+            <label className="flex items-center justify-between px-4 py-3.5 border border-mist rounded-xl cursor-pointer hover:border-gold/30 transition-all">
+              <span className="text-xs font-medium tracking-[0.15em] uppercase text-charcoal/60">Active</span>
+              <input type="checkbox" checked={editForm.isActive}
+                onChange={(e) => setEditForm((f) => ({ ...f, isActive: e.target.checked }))}
+                className="w-4 h-4 accent-gold" />
+            </label>
+            <label className="flex items-center justify-between px-4 py-3.5 border border-mist rounded-xl cursor-pointer hover:border-gold/30 transition-all">
+              <span className="text-xs font-medium tracking-[0.15em] uppercase text-charcoal/60">Featured</span>
+              <input type="checkbox" checked={editForm.isFeatured}
+                onChange={(e) => setEditForm((f) => ({ ...f, isFeatured: e.target.checked }))}
+                className="w-4 h-4 accent-gold" />
+            </label>
+          </div>
+
+          <div className="flex gap-3 pt-2">
             <Button type="submit" variant="primary" size="sm" loading={editUploading}>Save Changes</Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setEditingProduct(null)}>Cancel</Button>
           </div>

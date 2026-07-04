@@ -128,6 +128,7 @@ export function parseCartItem(value: unknown, index: number): Result<{ productId
 export function parseProductBody(body: unknown, partial = false): Result<Record<string, unknown>> {
   const data = asRecord(body);
   const updates: Record<string, unknown> = {};
+  const clears: Record<string, 1> = {};
 
   if (data.name !== undefined) {
     const name = requiredString(data.name, "Product name", 120);
@@ -148,9 +149,13 @@ export function parseProductBody(body: unknown, partial = false): Result<Record<
   }
 
   if (!partial || data.originalPrice !== undefined) {
-    const originalPrice = optionalNumber(data.originalPrice, "Original price", 0);
-    if (!originalPrice.ok) return originalPrice;
-    updates.originalPrice = originalPrice.value;
+    if (data.originalPrice === null) {
+      clears.originalPrice = 1;
+    } else {
+      const originalPrice = optionalNumber(data.originalPrice, "Original price", 0);
+      if (!originalPrice.ok) return originalPrice;
+      updates.originalPrice = originalPrice.value;
+    }
   }
 
   if (!partial || data.images !== undefined) {
@@ -217,7 +222,27 @@ export function parseProductBody(body: unknown, partial = false): Result<Record<
     updates.isActive = isActive.value;
   }
 
-  return ok(updates);
+  return ok({ ...updates, __clear: Object.keys(clears).length ? clears : undefined } as Record<string, unknown>);
+}
+
+function applyProductUpdates(updates: Record<string, unknown>) {
+  const set: Record<string, unknown> = {};
+  let unset: Record<string, 1> | null = null;
+  for (const [key, value] of Object.entries(updates)) {
+    if (key === "__clear") continue;
+    if (value === undefined) continue;
+    set[key] = value;
+  }
+  const clearKeys = updates.__clear as Record<string, 1> | undefined;
+  if (clearKeys && typeof clearKeys === "object") {
+    unset = {};
+    for (const k of Object.keys(clearKeys)) unset[k] = 1;
+  }
+  return { set, unset };
+}
+
+export function buildProductUpdate(updates: Record<string, unknown>) {
+  return applyProductUpdates(updates);
 }
 
 export function parseCheckoutBody(body: unknown): Result<{
