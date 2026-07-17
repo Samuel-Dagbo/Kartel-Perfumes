@@ -58,7 +58,7 @@ export default function Hero() {
       <div className="hidden lg:block absolute inset-0 z-0">
         <motion.div style={{ y: imageY }} className="absolute inset-0">
           <div
-            className="w-full h-full bg-[length:100%_auto] bg-top bg-no-repeat"
+            className="w-full h-full bg-contain bg-center bg-no-repeat"
             style={{ backgroundImage: "url('https://res.cloudinary.com/dvlmnjeru/image/upload/v1784069001/kartel-perfume/yldhxa0ykneljoydudc5.png')" }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-ebony via-ebony/60 to-transparent z-10" />
