@@ -56,12 +56,12 @@ export default function Hero() {
   return (
     <section ref={ref} className="relative h-screen min-h-[680px] max-h-[1080px] overflow-hidden bg-ebony">
       <div className="hidden lg:block absolute inset-0 z-0">
-        <motion.div style={{ y: imageY }} className="absolute inset-0 lg:left-[42%] xl:left-[45%] 2xl:left-[48%]">
-          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-ebony/40 to-ebony z-10" />
+        <motion.div style={{ y: imageY }} className="absolute inset-0">
           <div
             className="w-full h-full bg-cover bg-center"
             style={{ backgroundImage: "url('https://res.cloudinary.com/dvlmnjeru/image/upload/v1784069001/kartel-perfume/yldhxa0ykneljoydudc5.png')" }}
           />
+          <div className="absolute inset-0 bg-gradient-to-r from-ebony via-ebony/60 to-transparent z-10" />
         </motion.div>
       </div>
 
